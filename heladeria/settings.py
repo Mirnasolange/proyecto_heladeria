@@ -40,7 +40,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.core.middleware.PanelLoginMiddleware',
 ]
+
+LOGIN_URL          = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/pedidos/gestion/'
+LOGOUT_REDIRECT_URL = '/'
 
 ROOT_URLCONF = 'heladeria.urls'
 
@@ -113,7 +118,6 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-
 
 
 # ── Email ──────────────────────────────────────────────────
