@@ -69,3 +69,52 @@ def notificar_en_camino(pedido):
             context     = context,
             destinatario = pedido.cliente_telefono,
         )
+
+
+def notificar_stock_critico(sabores_criticos, insumos_criticos):
+    """
+    Envía email de alerta de stock al dueño cuando se detectan
+    sabores agotados o insumos bajo mínimo.
+    """
+    from django.conf import settings
+ 
+    email_local = getattr(settings, "EMAIL_HELADERIA", None)
+    if not email_local:
+        return
+ 
+    lineas = ["⚠️ ALERTA DE STOCK CRÍTICO\n"]
+ 
+    if sabores_criticos:
+        lineas.append("Sabores con problemas:")
+        for item in sabores_criticos:
+            s = item["sabor"]
+            lineas.append(f"  • {s.nombre}: {s.stock_kg} kg (mín. {s.stock_minimo_kg} kg)")
+ 
+    if insumos_criticos:
+        lineas.append("\nInsumos bajo mínimo:")
+        for i in insumos_criticos:
+            lineas.append(f"  • {i.nombre}: {i.cantidad_actual} {i.get_unidad_display()} (mín. {i.cantidad_minima})")
+ 
+    lineas.append("\nRevisá el panel de stock.")
+    cuerpo = "\n".join(lineas)
+ 
+    _enviar(
+        asunto       = "⚠️ Heladería – Stock crítico detectado",
+        template     = None,       # usamos cuerpo directo
+        context      = {},
+        destinatario = email_local,
+    )
+ 
+    # Override: enviar con cuerpo directo (sin template)
+    from django.core.mail import send_mail
+    try:
+        send_mail(
+            subject        = "⚠️ Heladería – Stock crítico detectado",
+            message        = cuerpo,
+            from_email     = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@heladeria.com"),
+            recipient_list = [email_local],
+            fail_silently  = False,
+        )
+    except Exception as e:
+        print(f"[EMAIL ERROR] {e}")
+

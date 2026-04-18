@@ -5,6 +5,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 from apps.productos.models import Producto, Sabor, Topping
 from .models import Pedido, ItemPedido, ItemPedidoSabor, ItemPedidoTopping
@@ -363,3 +365,122 @@ def venta_rapida(request):
         return redirect("pedidos:gestion")
 
     return render(request, "pedidos/venta_rapida.html", {"productos": productos})
+
+# ─────────────────────────────────────────────
+# REPARTOS (DELIVERY)
+# ─────────────────────────────────────────────
+
+def repartos(request):
+    """Lista de pedidos en delivery, agrupados por estado."""
+    
+    en_camino = Pedido.objects.filter(
+        tipo_entrega = Pedido.ENTREGA_DELIVERY,
+        estado__in = [Pedido.ESTADO_LISTO, Pedido.ESTADO_EN_CAMINO],
+    ).order_by("fecha_creacion")
+
+    hoy = timezone.now().date()
+
+    entregados_hoy = Pedido.objects.filter(
+        tipo_entrega = Pedido.ENTREGA_DELIVERY,
+        estado = Pedido.ESTADO_ENTREGADO,
+        fecha_actualizacion__date = hoy,
+    ).order_by("-fecha_actualizacion")
+
+    return render(request, "pedidos/repartos.html", {
+        "en_camino": en_camino,
+        "entregados_hoy": entregados_hoy,
+    })
+
+
+# ─────────────────────────────────────────────
+# POS (PUNTO DE VENTA)
+# ─────────────────────────────────────────────
+
+def pos(request):
+    """Pantalla principal del Punto de Venta (POS)."""
+    from apps.productos.models import Producto
+    productos = Producto.objects.filter(activo=True).order_by("tipo", "nombre")
+    context = {"productos": productos}
+    return render(request, "pedidos/pos.html", context)
+
+
+@require_POST
+def pos_cobrar(request):
+    """
+    Recibe JSON con la venta del POS y crea el pedido + pago + movimiento de caja.
+    Devuelve JSON con el número de pedido o error.
+    """
+    from apps.productos.models import Producto
+    from apps.pagos.models import CajaDiaria, MovimientoCaja, Pago
+    from django.utils import timezone
+
+    try:
+        data        = json.loads(request.body)
+        items_data  = data.get("items", [])
+        metodo_pago = data.get("metodo_pago", "EFECTIVO")
+        monto_pagado = Decimal(str(data.get("monto_pagado", "0")))
+        nombre      = data.get("nombre", "Mostrador").strip() or "Mostrador"
+        telefono    = data.get("telefono", "-").strip() or "-"
+
+        if not items_data:
+            return JsonResponse({"ok": False, "error": "Sin ítems"}, status=400)
+
+        # Crear pedido
+        pedido = Pedido.objects.create(
+            cliente_nombre        = nombre,
+            cliente_telefono      = telefono,
+            tipo_pedido           = Pedido.TIPO_MOSTRADOR,
+            tipo_entrega          = Pedido.ENTREGA_RETIRO,
+            estado                = Pedido.ESTADO_LISTO,
+            metodo_pago_principal = metodo_pago,
+        )
+
+        for it in items_data:
+            producto = Producto.objects.get(pk=it["producto_id"])
+            cantidad = int(it.get("cantidad", 1))
+            subtotal = producto.precio * cantidad
+            ItemPedido.objects.create(
+                pedido          = pedido,
+                producto        = producto,
+                cantidad        = cantidad,
+                precio_unitario = producto.precio,
+                subtotal        = subtotal,
+                comentarios     = it.get("comentarios", ""),
+            )
+
+        pedido.calcular_total()
+
+        # Pago
+        tipo_pago = Pago.TIPO_EFECTIVO if metodo_pago == "EFECTIVO" else Pago.TIPO_MP
+        Pago.objects.create(
+            pedido  = pedido,
+            tipo    = tipo_pago,
+            monto   = pedido.total,
+            estado  = Pago.ESTADO_APROBADO,
+        )
+
+        # Movimiento de caja
+        hoy  = timezone.now().date()
+        caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
+        if caja:
+            MovimientoCaja.objects.create(
+                caja        = caja,
+                pedido      = pedido,
+                tipo        = MovimientoCaja.TIPO_INGRESO,
+                monto       = pedido.total,
+                descripcion = f"POS – {pedido.numero}",
+            )
+            caja.calcular_cierre_esperado()
+            caja.save(update_fields=["monto_cierre_esperado"])
+
+        vuelto = float(monto_pagado) - float(pedido.total) if metodo_pago == "EFECTIVO" else 0
+
+        return JsonResponse({
+            "ok":     True,
+            "numero": pedido.numero,
+            "total":  float(pedido.total),
+            "vuelto": max(0, vuelto),
+        })
+
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)

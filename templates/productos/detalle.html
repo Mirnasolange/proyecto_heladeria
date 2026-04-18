@@ -1,6 +1,45 @@
 {% extends "base.html" %}
 {% block title %}{{ producto.nombre }} – Heladería{% endblock %}
 
+{% block extra_css %}
+.sabor-label, .topping-label {
+  display: block;
+  padding: 10px 8px;
+  border: 2px solid #dee2e6;
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+  background: #fff;
+  font-size: .88rem;
+  user-select: none;
+}
+.sabor-label:hover  { border-color: var(--turquesa); color: var(--turquesa); }
+.topping-label:hover{ border-color: var(--madera);   color: var(--madera); }
+
+/* Estado seleccionado: CSS puro, sin JS */
+.sabor-check:checked  + .sabor-label  {
+  background: var(--turquesa);
+  border-color: var(--turquesa);
+  color: #fff;
+  font-weight: 600;
+}
+.topping-check:checked + .topping-label {
+  background: var(--madera);
+  border-color: var(--madera);
+  color: #fff;
+  font-weight: 600;
+}
+/* Ocultar el input sin romper el :checked */
+.sabor-check, .topping-check {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+{% endblock %}
+
 {% block content %}
 <div class="container py-5" style="max-width:680px">
 
@@ -24,39 +63,41 @@
     <div class="mb-4">
       <label class="form-label fw-bold">Cantidad</label>
       <div class="d-flex align-items-center gap-3">
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-menos">−</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btn-menos">−</button>
         <input type="number" name="cantidad" id="cantidad" value="1" min="1" max="10"
-               class="form-control text-center" style="width:70px">
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-mas">+</button>
+               class="form-control text-center fw-bold" style="width:70px" readonly>
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btn-mas">+</button>
       </div>
     </div>
 
-    <!-- Sabores (solo para helados) -->
+    <!-- Sabores (solo helados) -->
     {% if producto.es_helado %}
     <div class="mb-4">
       <label class="form-label fw-bold">
         Sabores
-        <small class="text-muted fw-normal">(máx. {{ limite_sabores }})</small>
+        <span class="text-muted fw-normal">(máx. {{ limite_sabores }})</span>
       </label>
-      <p class="text-muted small mb-2">
+      <p class="text-muted small mb-3">
         Si querés combinar más de {{ limite_sabores }}, aclaralo en comentarios.
       </p>
 
       <div class="row g-2" id="contenedor-sabores">
         {% for sabor in sabores %}
-        <div class="col-6 col-md-4">
-          <label class="w-100">
-            <input type="checkbox" name="sabores_ids" value="{{ sabor.id }}"
-                   class="sabor-check visually-hidden">
-            <div class="p-2 border rounded text-center sabor-label" style="cursor:pointer;transition:all .15s">
-              <small>{{ sabor.nombre }}</small>
-            </div>
+        <div class="col-4">
+          <label>
+            <input type="checkbox"
+                   name="sabores_ids"
+                   value="{{ sabor.id }}"
+                   class="sabor-check">
+            <span class="sabor-label">{{ sabor.nombre }}</span>
           </label>
         </div>
         {% endfor %}
       </div>
-      <div id="aviso-limite" class="text-danger small mt-2 d-none">
-        Máximo {{ limite_sabores }} sabores. Aclará el resto en comentarios.
+
+      <div id="aviso-limite" class="alert alert-warning py-2 mt-3 d-none">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Máximo {{ limite_sabores }} sabores. Si querés más, aclaralo en comentarios.
       </div>
     </div>
     {% endif %}
@@ -66,17 +107,17 @@
     <div class="mb-4">
       <label class="form-label fw-bold">
         Toppings
-        <small class="text-muted fw-normal">(1 gratis · +$100 c/u adicional)</small>
+        <span class="text-muted fw-normal small">(1 gratis · +$100 c/u adicional)</span>
       </label>
       <div class="row g-2">
         {% for topping in toppings %}
-        <div class="col-6 col-md-4">
-          <label class="w-100">
-            <input type="checkbox" name="toppings_ids" value="{{ topping.id }}"
-                   class="topping-check visually-hidden">
-            <div class="p-2 border rounded text-center topping-label" style="cursor:pointer;transition:all .15s">
-              <small>{{ topping.nombre }}</small>
-            </div>
+        <div class="col-4">
+          <label>
+            <input type="checkbox"
+                   name="toppings_ids"
+                   value="{{ topping.id }}"
+                   class="topping-check">
+            <span class="topping-label">{{ topping.nombre }}</span>
           </label>
         </div>
         {% endfor %}
@@ -86,29 +127,32 @@
 
     <!-- Comentarios -->
     <div class="mb-4">
-      <label class="form-label fw-bold">Comentarios <small class="text-muted fw-normal">(opcional)</small></label>
+      <label class="form-label fw-bold">
+        Comentarios
+        <span class="text-muted fw-normal small">(opcional)</span>
+      </label>
       <textarea name="comentarios" class="form-control" rows="2"
                 placeholder="Ej: más chocolate que vainilla, sin maní, etc."></textarea>
     </div>
 
     <!-- Resumen de precio -->
-    <div class="alert alert-light border mb-4" id="resumen-precio">
-      <div class="d-flex justify-content-between">
-        <span>Precio unitario</span>
-        <span id="precio-base">${{ producto.precio }}</span>
+    <div class="card border rounded-3 mb-4 p-3" style="background:var(--gris-suave)">
+      <div class="d-flex justify-content-between mb-1">
+        <span class="text-muted small">Precio unitario</span>
+        <span class="small">${{ producto.precio }}</span>
       </div>
-      <div class="d-flex justify-content-between text-muted small" id="fila-toppings" style="display:none!important">
-        <span>Toppings extra</span>
-        <span id="precio-toppings">$0</span>
+      <div id="fila-toppings" class="d-flex justify-content-between mb-1" style="display:none!important">
+        <span class="text-muted small">Toppings extra</span>
+        <span class="small" id="precio-toppings">$0</span>
       </div>
       <hr class="my-2">
       <div class="d-flex justify-content-between fw-bold">
         <span>Subtotal</span>
-        <span id="precio-total" class="text-turquesa">${{ producto.precio }}</span>
+        <span class="text-turquesa" id="precio-total">${{ producto.precio }}</span>
       </div>
     </div>
 
-    <button type="submit" class="btn btn-turquesa w-100 py-2 fs-5">
+    <button type="submit" class="btn btn-turquesa w-100 py-3 fw-bold fs-5">
       <i class="bi bi-bag-plus me-2"></i>Agregar al carrito
     </button>
   </form>
@@ -118,11 +162,11 @@
 
 {% block extra_js %}
 <script>
-  const PRECIO_BASE   = {{ producto.precio }};
-  const LIMITE        = {{ limite_sabores }};
+  const PRECIO_BASE          = {{ producto.precio }};
+  const LIMITE               = {{ limite_sabores }};
   const PRECIO_TOPPING_EXTRA = 100;
 
-  // ── Cantidad ──
+  // ── Cantidad ──────────────────────────────────────
   document.getElementById("btn-menos").addEventListener("click", () => {
     const inp = document.getElementById("cantidad");
     if (parseInt(inp.value) > 1) { inp.value = parseInt(inp.value) - 1; actualizar(); }
@@ -132,39 +176,24 @@
     if (parseInt(inp.value) < 10) { inp.value = parseInt(inp.value) + 1; actualizar(); }
   });
 
-  // ── Sabores: estilo toggle + límite ──
+  // ── Límite de sabores ─────────────────────────────
   document.querySelectorAll(".sabor-check").forEach(chk => {
     chk.addEventListener("change", () => {
-      const seleccionados = document.querySelectorAll(".sabor-check:checked");
-      if (seleccionados.length > LIMITE) {
-        chk.checked = false;
+      const sel = document.querySelectorAll(".sabor-check:checked");
+      if (sel.length > LIMITE) {
+        chk.checked = false;   // revertir
         document.getElementById("aviso-limite").classList.remove("d-none");
         return;
       }
       document.getElementById("aviso-limite").classList.add("d-none");
-      chk.closest("label").querySelector(".sabor-label").style.background =
-        chk.checked ? "var(--turquesa)" : "";
-      chk.closest("label").querySelector(".sabor-label").style.color =
-        chk.checked ? "#fff" : "";
-      chk.closest("label").querySelector(".sabor-label").style.borderColor =
-        chk.checked ? "var(--turquesa)" : "";
-    });
-  });
-
-  // ── Toppings: estilo toggle ──
-  document.querySelectorAll(".topping-check").forEach(chk => {
-    chk.addEventListener("change", () => {
-      chk.closest("label").querySelector(".topping-label").style.background =
-        chk.checked ? "var(--madera)" : "";
-      chk.closest("label").querySelector(".topping-label").style.color =
-        chk.checked ? "#fff" : "";
-      chk.closest("label").querySelector(".topping-label").style.borderColor =
-        chk.checked ? "var(--madera)" : "";
       actualizar();
     });
   });
 
-  document.getElementById("cantidad").addEventListener("input", actualizar);
+  // ── Precio dinámico ───────────────────────────────
+  document.querySelectorAll(".topping-check").forEach(chk => {
+    chk.addEventListener("change", actualizar);
+  });
 
   function actualizar() {
     const cantidad  = parseInt(document.getElementById("cantidad").value) || 1;
@@ -172,12 +201,14 @@
     const extraTop  = Math.max(0, nTop - 1) * PRECIO_TOPPING_EXTRA;
     const subtotal  = (PRECIO_BASE * cantidad) + extraTop;
 
-    document.getElementById("precio-total").textContent = "$" + subtotal.toFixed(0);
+    document.getElementById("precio-total").textContent = "$" + subtotal.toLocaleString("es-AR");
+
+    const filaToppings = document.getElementById("fila-toppings");
     if (extraTop > 0) {
-      document.getElementById("fila-toppings").style.removeProperty("display");
-      document.getElementById("precio-toppings").textContent = "+$" + extraTop;
+      filaToppings.style.removeProperty("display");
+      document.getElementById("precio-toppings").textContent = "+$" + extraTop.toLocaleString("es-AR");
     } else {
-      document.getElementById("fila-toppings").style.display = "none";
+      filaToppings.style.display = "none";
     }
   }
 </script>

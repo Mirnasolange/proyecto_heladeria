@@ -1,0 +1,588 @@
+{% extends "panel/base.html" %}
+{% block title %}Caja POS{% endblock %}
+{% block menu_pos %}active{% endblock %}
+
+{% block extra_css %}
+:root {
+  --pos-bg:     #1a1a2e;
+  --pos-panel:  #16213e;
+  --pos-card:   #0f3460;
+  --pos-accent: #2EC4B6;
+  --pos-warn:   #e94560;
+  --pos-text:   #eaeaea;
+  --pos-muted:  #8892a4;
+}
+body { background: var(--pos-bg) !important; color: var(--pos-text); }
+
+/* ── Layout principal ── */
+#pos-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+#pos-header {
+  grid-column: 1 / -1;
+  background: var(--pos-panel);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+#pos-header h1 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--pos-accent);
+  margin: 0;
+  white-space: nowrap;
+}
+.kbd-hint {
+  font-size: .7rem;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--pos-muted);
+}
+
+/* ── Buscador ── */
+#pos-search {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  color: var(--pos-text);
+  border-radius: 8px;
+  padding: 6px 14px;
+  width: 280px;
+  font-size: .9rem;
+  outline: none;
+}
+#pos-search:focus { border-color: var(--pos-accent); }
+#pos-search::placeholder { color: var(--pos-muted); }
+
+/* ── Grid de productos ── */
+#pos-productos {
+  overflow-y: auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  align-content: start;
+  background: var(--pos-bg);
+}
+
+.prod-card {
+  background: var(--pos-panel);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 10px;
+  padding: 14px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+}
+.prod-card:hover, .prod-card:focus {
+  border-color: var(--pos-accent);
+  background: var(--pos-card);
+  transform: translateY(-2px);
+  outline: none;
+}
+.prod-card .prod-emoji { font-size: 2rem; display: block; margin-bottom: 6px; }
+.prod-card .prod-nombre { font-size: .8rem; font-weight: 600; line-height: 1.2; }
+.prod-card .prod-tipo   { font-size: .7rem; color: var(--pos-muted); margin-top: 2px; }
+.prod-card .prod-precio { font-size: .95rem; font-weight: 700; color: var(--pos-accent); margin-top: 6px; }
+
+/* ── Panel derecho: ticket ── */
+#pos-ticket {
+  background: var(--pos-panel);
+  border-left: 1px solid rgba(255,255,255,.07);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+}
+
+#ticket-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+#ticket-header h2 { font-size: .95rem; font-weight: 700; margin: 0; }
+
+#ticket-lista {
+  overflow-y: auto;
+  padding: 10px 16px;
+}
+
+.ticket-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.ticket-item .ti-nombre { flex: 1; font-size: .85rem; line-height: 1.3; }
+.ticket-item .ti-tipo   { font-size: .7rem; color: var(--pos-muted); display: block; }
+.ticket-item .ti-qty    {
+  display: flex; align-items: center; gap: 4px;
+}
+.ti-btn {
+  width: 22px; height: 22px; border-radius: 4px;
+  background: rgba(255,255,255,.08); border: none; color: var(--pos-text);
+  font-size: .9rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .1s;
+}
+.ti-btn:hover { background: var(--pos-warn); }
+.ti-qty-num {
+  width: 28px; text-align: center; font-size: .85rem; font-weight: 600;
+}
+.ti-precio { font-size: .85rem; font-weight: 700; min-width: 64px; text-align: right; color: var(--pos-accent); }
+
+#ticket-vacio {
+  text-align: center;
+  color: var(--pos-muted);
+  padding: 40px 20px;
+  font-size: .85rem;
+}
+
+/* ── Panel de cobro ── */
+#pos-cobro {
+  border-top: 1px solid rgba(255,255,255,.07);
+  padding: 14px 16px;
+}
+
+#cobro-total-wrap {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 10px;
+}
+#cobro-label { font-size: .8rem; color: var(--pos-muted); text-transform: uppercase; letter-spacing: 1px; }
+#cobro-total { font-size: 2rem; font-weight: 700; color: var(--pos-accent); }
+
+.cobro-row { display: flex; gap: 8px; margin-bottom: 8px; }
+
+#cobro-input {
+  flex: 1;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  color: var(--pos-text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  outline: none;
+}
+#cobro-input:focus { border-color: var(--pos-accent); }
+
+#cobro-vuelto {
+  font-size: .9rem;
+  font-weight: 600;
+  text-align: center;
+  color: #4ade80;
+  min-height: 20px;
+  margin-bottom: 10px;
+}
+
+/* Botones de método de pago */
+.metodo-btns { display: flex; gap: 6px; margin-bottom: 10px; }
+.metodo-btn {
+  flex: 1;
+  padding: 7px 4px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  color: var(--pos-text);
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: center;
+}
+.metodo-btn.activo {
+  background: var(--pos-accent);
+  border-color: var(--pos-accent);
+  color: #fff;
+}
+
+/* Botones de acción */
+.pos-btn {
+  width: 100%; padding: 12px; border-radius: 8px;
+  font-size: .95rem; font-weight: 700;
+  cursor: pointer; border: none; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+#btn-cobrar {
+  background: var(--pos-accent); color: #fff; margin-bottom: 6px;
+}
+#btn-cobrar:hover { filter: brightness(1.1); }
+#btn-cobrar:disabled { opacity: .4; cursor: not-allowed; }
+#btn-cancelar { background: rgba(233,69,96,.2); color: var(--pos-warn); border: 1px solid var(--pos-warn); }
+#btn-cancelar:hover { background: var(--pos-warn); color: #fff; }
+
+/* ── Modal confirmación ── */
+#modal-confirmacion {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+}
+#modal-confirmacion.visible { display: flex; }
+#modal-inner {
+  background: var(--pos-panel);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+  max-width: 360px;
+  width: 90%;
+}
+#modal-numero { font-size: 2rem; font-weight: 700; color: var(--pos-accent); }
+#modal-vuelto { font-size: 1.3rem; font-weight: 700; color: #4ade80; margin-top: 8px; }
+#modal-cerrar { margin-top: 24px; width: 100%; }
+{% endblock %}
+
+{% block panel_content %}{% endblock %}
+
+{% block content %}
+<!-- Override total del layout — POS toma toda la pantalla -->
+<div id="pos-wrapper">
+
+  <!-- ── Header ── -->
+  <header id="pos-header">
+    <h1>🍦 Caja POS</h1>
+
+    <input type="text" id="pos-search" placeholder="Buscar producto… (F3)"
+           autocomplete="off" spellcheck="false">
+
+    <div class="d-flex gap-3 align-items-center">
+      <span class="kbd-hint">F1 Cobrar</span>
+      <span class="kbd-hint">F3 Buscar</span>
+      <span class="kbd-hint">F4 Limpiar</span>
+      <span class="kbd-hint">ESC Cancelar</span>
+      <a href="{% url 'pedidos:gestion' %}" class="btn btn-sm btn-outline-secondary ms-3">
+        ← Panel
+      </a>
+    </div>
+  </header>
+
+  <!-- ── Grid productos ── -->
+  <main id="pos-productos">
+    {% for p in productos %}
+    <div class="prod-card"
+         tabindex="0"
+         data-id="{{ p.pk }}"
+         data-nombre="{{ p.nombre }}"
+         data-tipo="{{ p.get_tipo_display }}"
+         data-precio="{{ p.precio }}"
+         data-emoji="{% if p.tipo == 'postre' %}🍮{% elif p.tipo == 'helado_cuarto' %}🍦{% elif p.tipo == 'helado_medio' %}🍨{% else %}🍧{% endif %}"
+         onclick="agregarProducto(this)"
+         onkeydown="if(event.key==='Enter'||event.key===' ')agregarProducto(this)">
+      <span class="prod-emoji">
+        {% if p.tipo == "postre" %}🍮
+        {% elif p.tipo == "helado_cuarto" %}🍦
+        {% elif p.tipo == "helado_medio" %}🍨
+        {% else %}🍧{% endif %}
+      </span>
+      <div class="prod-nombre">{{ p.nombre }}</div>
+      <div class="prod-tipo">{{ p.get_tipo_display }}</div>
+      <div class="prod-precio">${{ p.precio|floatformat:0 }}</div>
+    </div>
+    {% endfor %}
+  </main>
+
+  <!-- ── Ticket lateral ── -->
+  <aside id="pos-ticket">
+    <div id="ticket-header">
+      <h2>Ticket <span id="ticket-cant" class="text-muted" style="font-size:.8rem;font-weight:400"></span></h2>
+    </div>
+
+    <div id="ticket-lista">
+      <div id="ticket-vacio">
+        Seleccioná productos<br>para comenzar la venta
+      </div>
+    </div>
+
+    <div id="pos-cobro">
+      <!-- Total -->
+      <div id="cobro-total-wrap">
+        <span id="cobro-label">Total a cobrar</span>
+        <span id="cobro-total">$0</span>
+      </div>
+
+      <!-- Método de pago -->
+      <div class="metodo-btns">
+        <button class="metodo-btn activo" data-metodo="EFECTIVO" onclick="setMetodo(this)">
+          💵 Efectivo
+        </button>
+        <button class="metodo-btn" data-metodo="MERCADOPAGO" onclick="setMetodo(this)">
+          📱 MercadoPago
+        </button>
+      </div>
+
+      <!-- Monto pagado (solo efectivo) -->
+      <div class="cobro-row" id="fila-monto-pagado">
+        <input type="number" id="cobro-input" placeholder="Monto recibido" min="0" step="100"
+               oninput="calcularVuelto()">
+      </div>
+
+      <!-- Vuelto -->
+      <div id="cobro-vuelto"></div>
+
+      <!-- Nombre opcional -->
+      <div class="cobro-row">
+        <input type="text" id="cobro-nombre" class="form-control form-control-sm"
+               style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--pos-text)"
+               placeholder="Nombre cliente (opcional)">
+      </div>
+
+      <!-- Botones -->
+      <button class="pos-btn" id="btn-cobrar" disabled onclick="cobrar()">
+        <i class="bi bi-check-circle"></i> Cobrar (F1)
+      </button>
+      <button class="pos-btn" id="btn-cancelar" onclick="limpiarTicket()">
+        <i class="bi bi-x-circle"></i> Cancelar (ESC / F4)
+      </button>
+    </div>
+  </aside>
+
+</div>
+
+<!-- Modal confirmación -->
+<div id="modal-confirmacion">
+  <div id="modal-inner">
+    <div style="font-size:3rem">✅</div>
+    <p style="margin:.5rem 0 0;color:var(--pos-muted);font-size:.85rem">Venta registrada</p>
+    <div id="modal-numero"></div>
+    <div id="modal-vuelto"></div>
+    <button class="pos-btn btn-turquesa" id="modal-cerrar" onclick="cerrarModal()" style="background:var(--pos-accent)">
+      Nueva venta (Enter)
+    </button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+const URL_COBRAR = "{% url 'pedidos:pos_cobrar' %}";
+
+let ticket   = [];   // [{producto_id, nombre, tipo, precio, cantidad}]
+let metodo   = "EFECTIVO";
+
+// ── Agregar producto al ticket ──
+function agregarProducto(el) {
+  const id     = el.dataset.id;
+  const idx    = ticket.findIndex(i => i.producto_id === id);
+  if (idx >= 0) {
+    ticket[idx].cantidad++;
+  } else {
+    ticket.push({
+      producto_id: id,
+      nombre:      el.dataset.nombre,
+      tipo:        el.dataset.tipo,
+      precio:      parseFloat(el.dataset.precio),
+      cantidad:    1,
+      emoji:       el.dataset.emoji,
+    });
+  }
+  renderTicket();
+}
+
+// ── Cambiar cantidad desde el ticket ──
+function cambiarCantidad(idx, delta) {
+  ticket[idx].cantidad += delta;
+  if (ticket[idx].cantidad <= 0) ticket.splice(idx, 1);
+  renderTicket();
+}
+
+// ── Render del ticket ──
+function renderTicket() {
+  const lista = document.getElementById("ticket-lista");
+  const vacio = document.getElementById("ticket-vacio");
+
+  if (ticket.length === 0) {
+    lista.innerHTML = "";
+    lista.appendChild(vacio);
+    document.getElementById("cobro-total").textContent = "$0";
+    document.getElementById("ticket-cant").textContent = "";
+    document.getElementById("btn-cobrar").disabled = true;
+    document.getElementById("cobro-vuelto").textContent = "";
+    return;
+  }
+
+  let html = "";
+  let total = 0;
+  ticket.forEach((it, idx) => {
+    const sub = it.precio * it.cantidad;
+    total += sub;
+    html += `
+      <div class="ticket-item">
+        <div class="ti-nombre">
+          ${it.emoji} ${it.nombre}
+          <span class="ti-tipo">${it.tipo}</span>
+        </div>
+        <div class="ti-qty">
+          <button class="ti-btn" onclick="cambiarCantidad(${idx}, -1)">−</button>
+          <span class="ti-qty-num">${it.cantidad}</span>
+          <button class="ti-btn" onclick="cambiarCantidad(${idx}, +1)">+</button>
+        </div>
+        <div class="ti-precio">$${sub.toLocaleString("es-AR")}</div>
+      </div>`;
+  });
+
+  lista.innerHTML = html;
+  document.getElementById("cobro-total").textContent = "$" + total.toLocaleString("es-AR");
+  document.getElementById("ticket-cant").textContent = `(${ticket.length} ítem${ticket.length > 1 ? "s" : ""})`;
+  document.getElementById("btn-cobrar").disabled = false;
+  calcularVuelto();
+}
+
+// ── Método de pago ──
+function setMetodo(btn) {
+  metodo = btn.dataset.metodo;
+  document.querySelectorAll(".metodo-btn").forEach(b => b.classList.remove("activo"));
+  btn.classList.add("activo");
+  const filaMonto = document.getElementById("fila-monto-pagado");
+  filaMonto.style.display = metodo === "EFECTIVO" ? "flex" : "none";
+  document.getElementById("cobro-vuelto").textContent = "";
+}
+
+// ── Calcular vuelto ──
+function calcularVuelto() {
+  if (metodo !== "EFECTIVO") return;
+  const total   = calcularTotal();
+  const pagado  = parseFloat(document.getElementById("cobro-input").value) || 0;
+  const vuelto  = pagado - total;
+  const el = document.getElementById("cobro-vuelto");
+  if (pagado > 0 && vuelto >= 0) {
+    el.textContent = "Vuelto: $" + vuelto.toLocaleString("es-AR");
+  } else if (pagado > 0 && vuelto < 0) {
+    el.textContent = "Falta: $" + Math.abs(vuelto).toLocaleString("es-AR");
+    el.style.color = "#f87171";
+  } else {
+    el.textContent = "";
+  }
+  el.style.color = vuelto >= 0 ? "#4ade80" : "#f87171";
+}
+
+function calcularTotal() {
+  return ticket.reduce((acc, it) => acc + it.precio * it.cantidad, 0);
+}
+
+// ── Cobrar ──
+async function cobrar() {
+  if (ticket.length === 0) return;
+  const total   = calcularTotal();
+  const pagado  = parseFloat(document.getElementById("cobro-input").value) || 0;
+  const nombre  = document.getElementById("cobro-nombre").value.trim() || "Mostrador";
+
+  if (metodo === "EFECTIVO" && pagado < total) {
+    document.getElementById("cobro-input").focus();
+    document.getElementById("cobro-vuelto").textContent = "Ingresá el monto recibido";
+    document.getElementById("cobro-vuelto").style.color = "#f87171";
+    return;
+  }
+
+  document.getElementById("btn-cobrar").disabled = true;
+  document.getElementById("btn-cobrar").innerHTML = "Procesando…";
+
+  try {
+    const resp = await fetch(URL_COBRAR, {
+      method: "POST",
+      headers: {
+        "Content-Type":   "application/json",
+        "X-CSRFToken":    CSRF,
+      },
+      body: JSON.stringify({
+        items:        ticket.map(it => ({ producto_id: it.producto_id, cantidad: it.cantidad })),
+        metodo_pago:  metodo,
+        monto_pagado: pagado,
+        nombre:       nombre,
+      }),
+    });
+
+    const data = await resp.json();
+
+    if (data.ok) {
+      // Mostrar modal de confirmación
+      document.getElementById("modal-numero").textContent = data.numero;
+      if (metodo === "EFECTIVO" && data.vuelto > 0) {
+        document.getElementById("modal-vuelto").textContent =
+          "Vuelto: $" + data.vuelto.toLocaleString("es-AR");
+      } else {
+        document.getElementById("modal-vuelto").textContent = "";
+      }
+      document.getElementById("modal-confirmacion").classList.add("visible");
+    } else {
+      alert("Error: " + data.error);
+      document.getElementById("btn-cobrar").disabled = false;
+      document.getElementById("btn-cobrar").innerHTML = '<i class="bi bi-check-circle"></i> Cobrar (F1)';
+    }
+  } catch (e) {
+    alert("Error de conexión");
+    document.getElementById("btn-cobrar").disabled = false;
+    document.getElementById("btn-cobrar").innerHTML = '<i class="bi bi-check-circle"></i> Cobrar (F1)';
+  }
+}
+
+// ── Cerrar modal y reiniciar ──
+function cerrarModal() {
+  document.getElementById("modal-confirmacion").classList.remove("visible");
+  limpiarTicket();
+  document.getElementById("pos-search").value = "";
+  filtrarProductos("");
+  document.getElementById("pos-search").focus();
+}
+
+// ── Limpiar ticket ──
+function limpiarTicket() {
+  ticket = [];
+  renderTicket();
+  document.getElementById("cobro-input").value = "";
+  document.getElementById("cobro-nombre").value = "";
+  document.getElementById("btn-cobrar").innerHTML = '<i class="bi bi-check-circle"></i> Cobrar (F1)';
+}
+
+// ── Búsqueda de productos ──
+function filtrarProductos(q) {
+  const termino = q.toLowerCase();
+  document.querySelectorAll(".prod-card").forEach(card => {
+    const nombre = card.dataset.nombre.toLowerCase();
+    card.style.display = nombre.includes(termino) ? "" : "none";
+  });
+}
+document.getElementById("pos-search").addEventListener("input", e => filtrarProductos(e.target.value));
+
+// ── Atajos de teclado ──
+document.addEventListener("keydown", e => {
+  // F1 → Cobrar
+  if (e.key === "F1") { e.preventDefault(); if (!document.getElementById("btn-cobrar").disabled) cobrar(); }
+
+  // F3 → Foco en búsqueda
+  if (e.key === "F3") { e.preventDefault(); document.getElementById("pos-search").focus(); document.getElementById("pos-search").select(); }
+
+  // F4 o ESC → Cancelar / limpiar
+  if (e.key === "F4") { e.preventDefault(); limpiarTicket(); }
+  if (e.key === "Escape") {
+    if (document.getElementById("modal-confirmacion").classList.contains("visible")) {
+      cerrarModal();
+    } else {
+      limpiarTicket();
+    }
+  }
+
+  // Enter en modal → Nueva venta
+  if (e.key === "Enter" && document.getElementById("modal-confirmacion").classList.contains("visible")) {
+    cerrarModal();
+  }
+});
+
+// Focus inicial
+document.getElementById("pos-search").focus();
+</script>
+{% endblock %}

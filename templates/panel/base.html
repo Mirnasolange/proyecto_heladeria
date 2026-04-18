@@ -31,9 +31,16 @@
          class="nav-link {% block menu_caja %}{% endblock %}">
         <i class="bi bi-cash-stack"></i> Caja
       </a>
+      <a href="{% url 'pedidos:pos' %}"
+         class="nav-link {% block menu_pos %}{% endblock %}">
+        <i class="bi bi-cash-coin"></i> Caja POS
+      </a>
       <a href="{% url 'pagos:stock' %}"
          class="nav-link {% block menu_stock %}{% endblock %}">
         <i class="bi bi-box-seam"></i> Stock
+      </a>
+      <a href="{% url 'pedidos:repartos' %}" class="nav-link {% block menu_repartos %}{% endblock %}">
+        <i class="bi bi-scooter"></i> Repartos
       </a>
       <a href="{% url 'pagos:metricas' %}"
          class="nav-link {% block menu_metricas %}{% endblock %}">

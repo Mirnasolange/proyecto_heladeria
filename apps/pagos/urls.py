@@ -12,4 +12,5 @@ urlpatterns = [
     path('stock/',               views.stock,              name='stock'),
     path('stock/ajuste/',        views.ajuste_stock,       name='ajuste_stock'),
     path('proveedores/export/',  views.exportar_proveedores, name='exportar_proveedores'),
+    path('stock/alerta-email/',  views.alerta_stock_email, name='alerta_stock_email'),
 ]

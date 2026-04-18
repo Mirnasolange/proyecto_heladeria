@@ -115,9 +115,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 
-# ─────────────────────────────────────────────────────────────
-# Agregá esto al final de heladeria/settings.py
-# ─────────────────────────────────────────────────────────────
 
 # ── Email ──────────────────────────────────────────────────
 # Para desarrollo: imprime los emails en la consola (sin SMTP real)

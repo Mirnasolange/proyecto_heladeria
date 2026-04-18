@@ -1,0 +1,121 @@
+{% extends "panel/base.html" %}
+{% block title %}Repartos – Panel{% endblock %}
+{% block menu_repartos %}active{% endblock %}
+
+{% block panel_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold mb-0">🛵 Repartos</h2>
+  <span class="badge bg-warning text-dark fs-6">
+    {{ en_camino.count }} pendiente{{ en_camino.count|pluralize }}
+  </span>
+</div>
+
+<!-- Pedidos pendientes / en camino -->
+{% if en_camino %}
+<div class="row g-3 mb-5">
+  {% for pedido in en_camino %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card border-0 shadow-sm rounded-3 h-100"
+         style="border-left: 4px solid
+           {% if pedido.estado == 'EN_CAMINO' %}var(--turquesa){% else %}#BA7517{% endif %} !important">
+      <div class="card-body p-3">
+
+        <!-- Número y estado -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold text-turquesa mb-0">{{ pedido.numero }}</h6>
+          <span class="badge badge-{{ pedido.estado }}">{{ pedido.get_estado_display }}</span>
+        </div>
+
+        <!-- Cliente -->
+        <p class="fw-bold mb-0">{{ pedido.cliente_nombre }}</p>
+        <a href="tel:{{ pedido.cliente_telefono }}" class="text-muted small">
+          <i class="bi bi-telephone me-1"></i>{{ pedido.cliente_telefono }}
+        </a>
+
+        <!-- Dirección -->
+        <div class="d-flex gap-2 mt-2 mb-2">
+          <i class="bi bi-geo-alt-fill text-turquesa mt-1" style="flex-shrink:0"></i>
+          <p class="mb-0 small">{{ pedido.direccion_entrega }}</p>
+        </div>
+
+        <!-- Hora y total -->
+        <div class="d-flex justify-content-between text-muted small mb-3">
+          <span><i class="bi bi-clock me-1"></i>{{ pedido.fecha_creacion|date:"H:i" }}</span>
+          <span class="fw-bold text-turquesa">${{ pedido.total|floatformat:0 }}</span>
+        </div>
+
+        {% if pedido.comentarios %}
+        <div class="alert alert-warning py-1 px-2 mb-3 small">
+          <i class="bi bi-chat-left-text me-1"></i>{{ pedido.comentarios }}
+        </div>
+        {% endif %}
+
+        <!-- Acciones -->
+        <div class="d-flex gap-2">
+          {% if pedido.estado == 'LISTO' %}
+          <form method="POST" action="{% url 'pedidos:cambiar_estado' pedido.numero %}" class="flex-grow-1">
+            {% csrf_token %}
+            <input type="hidden" name="estado" value="EN_CAMINO">
+            <button class="btn btn-sm btn-outline-primary w-100">
+              <i class="bi bi-truck me-1"></i>Salió
+            </button>
+          </form>
+          {% endif %}
+
+          <form method="POST" action="{% url 'pedidos:cambiar_estado' pedido.numero %}" class="flex-grow-1">
+            {% csrf_token %}
+            <input type="hidden" name="estado" value="ENTREGADO">
+            <button class="btn btn-sm btn-turquesa w-100">
+              <i class="bi bi-check-circle me-1"></i>Entregado
+            </button>
+          </form>
+
+          <a href="https://wa.me/{{ pedido.cliente_telefono }}" target="_blank"
+             class="btn btn-sm btn-outline-success">
+            <i class="bi bi-whatsapp"></i>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 mb-4">
+  <div style="font-size:3rem">🛵</div>
+  <p class="text-muted mt-2">No hay repartos pendientes.</p>
+</div>
+{% endif %}
+
+<!-- Entregados hoy -->
+{% if entregados_hoy %}
+<h5 class="fw-bold text-muted mb-3">Entregados hoy</h5>
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="text-muted small">
+        <tr>
+          <th class="ps-3">Pedido</th>
+          <th>Cliente</th>
+          <th>Dirección</th>
+          <th class="text-end pe-3">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pedido in entregados_hoy %}
+        <tr>
+          <td class="ps-3 fw-bold text-turquesa">{{ pedido.numero }}</td>
+          <td>{{ pedido.cliente_nombre }}</td>
+          <td class="text-muted small">{{ pedido.direccion_entrega }}</td>
+          <td class="text-end pe-3">${{ pedido.total|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

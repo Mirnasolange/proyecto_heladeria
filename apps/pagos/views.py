@@ -18,19 +18,27 @@ from apps.productos.models import Sabor, Producto
 def caja_hoy(request):
     hoy  = timezone.now().date()
     caja = CajaDiaria.objects.filter(fecha=hoy).first()
-    movimientos = caja.movimientos.all() if caja else []
 
-    ingresos = caja.movimientos.filter(tipo=MovimientoCaja.TIPO_INGRESO).aggregate(total=Sum("monto"))["total"] or 0
-    egresos = caja.movimientos.filter(tipo=MovimientoCaja.TIPO_EGRESO).aggregate(total=Sum("monto"))["total"] or 0
+    if caja:
+        movimientos = caja.movimientos.all()
+        ingresos = caja.movimientos.filter(
+            tipo=MovimientoCaja.TIPO_INGRESO
+        ).aggregate(total=Sum("monto"))["total"] or 0
 
+        egresos = caja.movimientos.filter(
+            tipo=MovimientoCaja.TIPO_EGRESO
+        ).aggregate(total=Sum("monto"))["total"] or 0
+    else:
+        movimientos = []
+        ingresos = 0
+        egresos = 0
 
     context = {
-        "caja":        caja,
-        "hoy":         hoy,
+        "caja": caja,
+        "hoy": hoy,
         "movimientos": movimientos,
         "ingresos": ingresos,
         "egresos": egresos,
-        
     }
     return render(request, "pagos/caja.html", context)
 
@@ -161,11 +169,58 @@ def metricas(request):
 # ─────────────────────────────────────────────
 
 def stock(request):
-    sabores  = Sabor.objects.all().order_by("nombre")
+    from apps.productos.models import Sabor
+    from apps.pedidos.models import ItemPedidoSabor
+
+    # Período de análisis para proyección: últimos 14 días
+    hoy      = timezone.now().date()
+    hace_14  = hoy - datetime.timedelta(days=14)
+
+    # Consumo promedio diario por sabor (en kg) basado en ventas reales
+    consumo_qs = (
+        ItemPedidoSabor.objects
+        .filter(item_pedido__pedido__fecha_creacion__date__gte=hace_14)
+        .values("sabor_id")
+        .annotate(apariciones=Count("id"))
+    )
+    consumo_map = {}
+    for row in consumo_qs:
+        # Aproximamos: cada aparición ≈ 0.05 kg (ajustable)
+        kg_por_dia = (row["apariciones"] * 0.05) / 14
+        consumo_map[row["sabor_id"]] = round(kg_por_dia, 4)
+
+    sabores_data = []
+    alertas      = []
+
+    for sabor in Sabor.objects.all().order_by("nombre"):
+        consumo_diario = consumo_map.get(sabor.id, 0)
+        if consumo_diario > 0:
+            dias_restantes = sabor.stock_kg / Decimal(str(consumo_diario))
+            dias_restantes = int(dias_restantes)
+        else:
+            dias_restantes = None   # sin datos de venta
+
+        alerta = not sabor.disponible or (dias_restantes is not None and dias_restantes <= 3)
+
+        sabores_data.append({
+            "sabor":           sabor,
+            "consumo_diario":  consumo_diario,
+            "dias_restantes":  dias_restantes,
+            "alerta":          alerta,
+        })
+
+        if alerta:
+            alertas.append(sabor)
+
     insumos  = InsumoStock.objects.all()
-    context  = {
-        "sabores": sabores,
-        "insumos": insumos,
+    insumos_alerta = [i for i in insumos if i.bajo_stock]
+
+    context = {
+        "sabores_data":    sabores_data,
+        "insumos":         insumos,
+        "alertas":         alertas,
+        "insumos_alerta":  insumos_alerta,
+        "hay_alertas":     bool(alertas or insumos_alerta),
     }
     return render(request, "pagos/stock.html", context)
 
@@ -189,6 +244,29 @@ def ajuste_stock(request):
         )
     return redirect("pagos:stock")
 
+
+def alerta_stock_email(request):
+    """Envía un email de alerta de stock crítico al dueño. Llamado por AJAX."""
+    if request.method != "POST":
+        from django.http import JsonResponse
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+ 
+    from apps.core.emails import notificar_stock_critico
+    from django.http import JsonResponse
+ 
+    sabores_criticos = []
+    for sabor in Sabor.objects.filter(activo=True):
+        if not sabor.disponible:
+            sabores_criticos.append({"sabor": sabor, "motivo": "agotado"})
+ 
+    insumos_criticos = [i for i in InsumoStock.objects.all() if i.bajo_stock]
+ 
+    try:
+        notificar_stock_critico(sabores_criticos, insumos_criticos)
+        return JsonResponse({"ok": True})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)})
+ 
 
 # ─────────────────────────────────────────────
 # EXPORTAR EXCEL PARA PROVEEDORES
