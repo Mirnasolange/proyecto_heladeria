@@ -1,0 +1,169 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ pedido.numero }} – Panel{% endblock %}
+{% block menu_pedidos %}active{% endblock %}
+
+{% block panel_content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'pedidos:gestion' %}" class="btn btn-sm btn-outline-secondary">
+    ← Volver
+  </a>
+  <h2 class="fw-bold mb-0">Pedido {{ pedido.numero }}</h2>
+  <span class="badge badge-{{ pedido.estado }} px-3 py-2 fs-6">
+    {{ pedido.get_estado_display }}
+  </span>
+</div>
+
+<div class="row g-4">
+
+  <!-- ── Columna izquierda: ítems ── -->
+  <div class="col-lg-7">
+
+    <!-- Ítems -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Ítems del pedido</h5>
+
+        {% for item in items %}
+        <div class="border-bottom pb-3 mb-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <p class="fw-bold mb-0">{{ item.cantidad }}x {{ item.producto.nombre }}</p>
+              <small class="text-muted">{{ item.producto.get_tipo_display }}</small>
+
+              {% with sabores=item.sabores.all %}
+                {% if sabores %}
+                  <p class="text-muted small mb-0 mt-1">
+                    <i class="bi bi-flower1 me-1"></i>
+                    {% for s in sabores %}{{ s.sabor.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                  </p>
+                {% endif %}
+              {% endwith %}
+
+              {% with toppings=item.toppings.all %}
+                {% if toppings %}
+                  <p class="text-muted small mb-0">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    {% for t in toppings %}{{ t.topping.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                  </p>
+                {% endif %}
+              {% endwith %}
+
+              {% if item.comentarios %}
+                <p class="text-muted small mb-0 mt-1">
+                  <i class="bi bi-chat-left-text me-1"></i>{{ item.comentarios }}
+                </p>
+              {% endif %}
+            </div>
+            <span class="fw-bold text-turquesa">${{ item.subtotal|floatformat:0 }}</span>
+          </div>
+        </div>
+        {% endfor %}
+
+        <div class="d-flex justify-content-between fw-bold fs-5 pt-1">
+          <span>Total</span>
+          <span class="text-turquesa">${{ pedido.total|floatformat:0 }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagos -->
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Pagos</h5>
+        {% for pago in pagos %}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <span class="fw-500">{{ pago.get_tipo_display }}</span>
+            <span class="badge ms-2
+              {% if pago.estado == 'APROBADO' %}bg-success
+              {% elif pago.estado == 'RECHAZADO' %}bg-danger
+              {% else %}bg-warning text-dark{% endif %}">
+              {{ pago.get_estado_display }}
+            </span>
+          </div>
+          <span class="fw-bold">${{ pago.monto|floatformat:0 }}</span>
+        </div>
+        {% empty %}
+        <p class="text-muted small">Sin pagos registrados.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Columna derecha: datos + acciones ── -->
+  <div class="col-lg-5">
+
+    <!-- Datos del cliente -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Cliente</h5>
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted">Nombre</dt>
+          <dd class="col-7">{{ pedido.cliente_nombre }}</dd>
+
+          <dt class="col-5 text-muted">Teléfono</dt>
+          <dd class="col-7">
+            <a href="tel:{{ pedido.cliente_telefono }}">{{ pedido.cliente_telefono }}</a>
+          </dd>
+
+          <dt class="col-5 text-muted">Tipo pedido</dt>
+          <dd class="col-7">{{ pedido.get_tipo_pedido_display }}</dd>
+
+          <dt class="col-5 text-muted">Entrega</dt>
+          <dd class="col-7">{{ pedido.get_tipo_entrega_display }}</dd>
+
+          {% if pedido.direccion_entrega %}
+          <dt class="col-5 text-muted">Dirección</dt>
+          <dd class="col-7">{{ pedido.direccion_entrega }}</dd>
+          {% endif %}
+
+          <dt class="col-5 text-muted">Fecha</dt>
+          <dd class="col-7">{{ pedido.fecha_creacion|date:"d/m/Y H:i" }}</dd>
+        </dl>
+
+        {% if pedido.comentarios %}
+        <div class="alert alert-warning mt-3 mb-0 py-2">
+          <i class="bi bi-chat-left-text me-1"></i>
+          {{ pedido.comentarios }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Cambiar estado -->
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Cambiar estado</h5>
+        <form method="POST" action="{% url 'pedidos:cambiar_estado' pedido.numero %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <select name="estado" class="form-select">
+              {% for valor, etiqueta in estados %}
+              <option value="{{ valor }}" {% if pedido.estado == valor %}selected{% endif %}>
+                {{ etiqueta }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-turquesa w-100">
+            <i class="bi bi-arrow-repeat me-1"></i> Actualizar estado
+          </button>
+        </form>
+
+        <!-- Acceso rápido WhatsApp -->
+        {% if pedido.cliente_telefono != "-" %}
+        <a href="https://wa.me/{{ pedido.cliente_telefono|slugify }}"
+           target="_blank"
+           class="btn btn-outline-success w-100 mt-2">
+          <i class="bi bi-whatsapp me-1"></i> Avisar por WhatsApp
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

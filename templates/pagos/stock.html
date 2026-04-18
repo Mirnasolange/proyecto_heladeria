@@ -1,0 +1,137 @@
+{% extends "panel/base.html" %}
+{% block title %}Stock – Panel{% endblock %}
+{% block menu_stock %}active{% endblock %}
+
+{% block panel_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold mb-0">Stock</h2>
+  <a href="{% url 'pagos:exportar_proveedores' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-file-earmark-excel me-1"></i> Exportar para proveedores
+  </a>
+</div>
+
+<div class="row g-4">
+
+  <!-- Stock de helados por sabor -->
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Helados por sabor</h5>
+
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead class="text-muted small">
+              <tr>
+                <th>Sabor</th>
+                <th class="text-center">Stock (kg)</th>
+                <th class="text-center">Mínimo</th>
+                <th class="text-center">Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sabor in sabores %}
+              <tr>
+                <td class="fw-500">{{ sabor.nombre }}</td>
+                <td class="text-center">{{ sabor.stock_kg }}</td>
+                <td class="text-center text-muted small">{{ sabor.stock_minimo_kg }}</td>
+                <td class="text-center">
+                  {% if sabor.disponible %}
+                    <span class="badge bg-success">Disponible</span>
+                  {% else %}
+                    <span class="badge bg-danger">Agotado</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-secondary"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modal-ajuste"
+                          data-sabor-id="{{ sabor.id }}"
+                          data-sabor-nombre="{{ sabor.nombre }}"
+                          data-sabor-stock="{{ sabor.stock_kg }}">
+                    Ajustar
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Insumos -->
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Insumos</h5>
+        {% for insumo in insumos %}
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+          <div>
+            <p class="fw-500 mb-0">{{ insumo.nombre }}</p>
+            <small class="text-muted">{{ insumo.cantidad_actual }} {{ insumo.get_unidad_display }}</small>
+          </div>
+          {% if insumo.bajo_stock %}
+            <span class="badge bg-danger">⚠ Bajo stock</span>
+          {% else %}
+            <span class="badge bg-success">OK</span>
+          {% endif %}
+        </div>
+        {% empty %}
+        <p class="text-muted small">Sin insumos cargados. Agregálos desde el admin.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal ajuste de stock -->
+<div class="modal fade" id="modal-ajuste" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold">Ajustar stock</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{% url 'pagos:ajuste_stock' %}">
+        {% csrf_token %}
+        <input type="hidden" name="sabor_id" id="modal-sabor-id">
+        <div class="modal-body pt-0">
+          <p class="text-muted small mb-3" id="modal-sabor-info"></p>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Cantidad a ajustar (kg)</label>
+            <input type="number" name="cantidad_kg" class="form-control"
+                   placeholder="Positivo suma, negativo resta" step="0.001" required>
+            <div class="form-text">Ej: +2.5 para agregar, -0.5 para restar</div>
+          </div>
+          <div class="mb-1">
+            <label class="form-label small fw-bold">Motivo</label>
+            <input type="text" name="motivo" class="form-control"
+                   placeholder="Conteo físico, merma, etc.">
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-turquesa btn-sm">Aplicar ajuste</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Cargar datos del sabor en el modal
+  document.getElementById("modal-ajuste").addEventListener("show.bs.modal", function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById("modal-sabor-id").value   = btn.dataset.saborId;
+    document.getElementById("modal-sabor-info").textContent =
+      btn.dataset.saborNombre + " — stock actual: " + btn.dataset.saborStock + " kg";
+  });
+</script>
+{% endblock %}

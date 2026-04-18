@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block navbar %}
+<!-- El panel tiene su propio layout, sin navbar público -->
+{% endblock %}
+
+{% block whatsapp %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="d-flex" style="min-height:100vh">
+
+  <!-- ── Sidebar ── -->
+  <div class="sidebar d-flex flex-column p-3" style="width:220px;flex-shrink:0">
+    <a href="{% url 'core:homepage' %}" class="text-decoration-none mb-4 d-block">
+      <span style="font-family:'Playfair Display',serif;color:var(--crema);font-size:1.2rem">
+        🍦 Heladería
+      </span>
+    </a>
+
+    <nav class="nav flex-column gap-1">
+      <a href="{% url 'pedidos:gestion' %}"
+         class="nav-link {% block menu_pedidos %}{% endblock %}">
+        <i class="bi bi-receipt"></i> Pedidos
+      </a>
+      <a href="{% url 'pedidos:venta_rapida' %}"
+         class="nav-link {% block menu_venta %}{% endblock %}">
+        <i class="bi bi-lightning-charge"></i> Venta rápida
+      </a>
+      <a href="{% url 'pagos:caja_hoy' %}"
+         class="nav-link {% block menu_caja %}{% endblock %}">
+        <i class="bi bi-cash-stack"></i> Caja
+      </a>
+      <a href="{% url 'pagos:stock' %}"
+         class="nav-link {% block menu_stock %}{% endblock %}">
+        <i class="bi bi-box-seam"></i> Stock
+      </a>
+      <a href="{% url 'pagos:metricas' %}"
+         class="nav-link {% block menu_metricas %}{% endblock %}">
+        <i class="bi bi-bar-chart-line"></i> Métricas
+      </a>
+    </nav>
+
+    <div class="mt-auto pt-3 border-top border-secondary">
+      <a href="{% url 'core:homepage' %}" class="nav-link text-muted small">
+        <i class="bi bi-arrow-left"></i> Ver sitio web
+      </a>
+      <a href="{% url 'admin:index' %}" class="nav-link text-muted small">
+        <i class="bi bi-gear"></i> Admin Django
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Contenido ── -->
+  <div class="flex-grow-1 p-4" style="background:var(--gris-suave);overflow-y:auto">
+
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+          {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% block panel_content %}{% endblock %}
+  </div>
+
+</div>
+{% endblock %}

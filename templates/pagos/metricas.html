@@ -1,0 +1,183 @@
+{% extends "panel/base.html" %}
+{% block title %}Métricas – Panel{% endblock %}
+{% block menu_metricas %}active{% endblock %}
+
+{% block panel_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold mb-0">Métricas</h2>
+</div>
+
+<!-- Filtro de fechas -->
+<form method="GET" class="card border-0 shadow-sm rounded-3 p-3 mb-4">
+  <div class="d-flex flex-wrap gap-3 align-items-end">
+    <div>
+      <label class="form-label small fw-bold mb-1">Desde</label>
+      <input type="date" name="desde" class="form-control form-control-sm" value="{{ desde }}">
+    </div>
+    <div>
+      <label class="form-label small fw-bold mb-1">Hasta</label>
+      <input type="date" name="hasta" class="form-control form-control-sm" value="{{ hasta }}">
+    </div>
+    <button type="submit" class="btn btn-sm btn-turquesa">
+      <i class="bi bi-funnel me-1"></i> Filtrar
+    </button>
+    <a href="{% url 'pagos:metricas' %}" class="btn btn-sm btn-outline-secondary">Resetear</a>
+  </div>
+</form>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm rounded-3 p-4 text-center">
+      <small class="text-muted text-uppercase" style="letter-spacing:1px;font-size:.75rem">Ventas totales</small>
+      <p class="fw-bold mb-0" style="font-size:2rem">${{ total_ventas|floatformat:0 }}</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm rounded-3 p-4 text-center">
+      <small class="text-muted text-uppercase" style="letter-spacing:1px;font-size:.75rem">Pedidos</small>
+      <p class="fw-bold mb-0" style="font-size:2rem">{{ cantidad_pedidos }}</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm rounded-3 p-4 text-center">
+      <small class="text-muted text-uppercase" style="letter-spacing:1px;font-size:.75rem">Ticket promedio</small>
+      <p class="fw-bold mb-0" style="font-size:2rem">${{ ticket_promedio|floatformat:0 }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+
+  <!-- Gráfico ventas por día -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm rounded-3 p-4">
+      <h5 class="fw-bold mb-3">Ventas por día</h5>
+      <canvas id="grafico-ventas" height="100"></canvas>
+    </div>
+  </div>
+
+  <!-- Ventas por método de pago -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm rounded-3 p-4">
+      <h5 class="fw-bold mb-3">Por método de pago</h5>
+      <canvas id="grafico-pago" height="200"></canvas>
+      <div class="mt-3">
+        {% for item in ventas_por_pago %}
+        <div class="d-flex justify-content-between mb-1">
+          <small>{{ item.metodo_pago_principal }}</small>
+          <small class="fw-bold">${{ item.total|floatformat:0 }}</small>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Productos más vendidos -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm rounded-3 p-4">
+      <h5 class="fw-bold mb-3">Productos más vendidos</h5>
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead class="text-muted small">
+            <tr><th>Producto</th><th class="text-end">Unidades</th><th class="text-end">Ingresos</th></tr>
+          </thead>
+          <tbody>
+            {% for p in productos_top %}
+            <tr>
+              <td>{{ p.producto__nombre }}</td>
+              <td class="text-end">{{ p.unidades }}</td>
+              <td class="text-end fw-bold">${{ p.ingresos|floatformat:0 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-muted text-center">Sin datos</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sabores más pedidos -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm rounded-3 p-4">
+      <h5 class="fw-bold mb-3">Sabores más pedidos</h5>
+      {% for s in sabores_top %}
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span>{{ s.sabor__nombre }}</span>
+        <div class="d-flex align-items-center gap-2">
+          <div class="bg-turquesa rounded" style="height:8px;width:{{ s.apariciones }}0px;max-width:120px;background:var(--turquesa)"></div>
+          <small class="text-muted">{{ s.apariciones }}</small>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-muted small">Sin datos de sabores en el período.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  // Datos desde Django
+  const diasLabels = [
+    {% for d in pedidos_por_dia %}"{{ d.fecha_creacion__date|date:'d/m' }}"{% if not forloop.last %},{% endif %}{% endfor %}
+  ];
+  const diasTotales = [
+    {% for d in pedidos_por_dia %}{{ d.total_dia|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}
+  ];
+  const pagoLabels  = [{% for p in ventas_por_pago %}"{{ p.metodo_pago_principal }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  const pagoTotales = [{% for p in ventas_por_pago %}{{ p.total|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+  const colorTurquesa = "#2EC4B6";
+  const colorChoco    = "#3D1C02";
+  const colorMadera   = "#C8A97E";
+
+  // Gráfico de barras: ventas por día
+  new Chart(document.getElementById("grafico-ventas"), {
+    type: "bar",
+    data: {
+      labels: diasLabels,
+      datasets: [{
+        label: "Ventas ($)",
+        data: diasTotales,
+        backgroundColor: colorTurquesa,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Gráfico de dona: método de pago
+  new Chart(document.getElementById("grafico-pago"), {
+    type: "doughnut",
+    data: {
+      labels: pagoLabels,
+      datasets: [{
+        data: pagoTotales,
+        backgroundColor: [colorTurquesa, colorMadera, colorChoco],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: "65%",
+      plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }
+    }
+  });
+</script>
+{% endblock %}
