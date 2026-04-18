@@ -45,10 +45,8 @@
     <div class="card border-0 shadow-sm rounded-3 p-3 text-center">
       <small class="text-muted">Ingresos</small>
       <p class="fw-bold fs-4 mb-0 text-success">
-        ${% with ing=movimientos_qs.filter %}{{ caja.movimientos.filter.count }}{% endwith %}
-        <!-- Calculado en contexto extra si hace falta -->
-        {{ caja.monto_cierre_esperado|floatformat:0 }}
-      </p>
+        ${{ ingresos|floatformat:0 }}
+        </p>
     </div>
   </div>
   <div class="col-6 col-md-3">

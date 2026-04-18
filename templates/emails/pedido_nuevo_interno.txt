@@ -1,0 +1,11 @@
+===== NUEVO PEDIDO =====
+Número:   {{ pedido.numero }}
+Cliente:  {{ pedido.cliente_nombre }} – {{ pedido.cliente_telefono }}
+Entrega:  {{ pedido.get_tipo_entrega_display }}
+{% if pedido.direccion_entrega %}Dirección: {{ pedido.direccion_entrega }}{% endif %}
+Pago:     {{ pedido.get_metodo_pago_principal_display }}
+Total:    ${{ pedido.total }}
+{% if pedido.comentarios %}
+Comentarios: {{ pedido.comentarios }}
+{% endif %}
+========================

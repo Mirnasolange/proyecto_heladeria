@@ -20,10 +20,17 @@ def caja_hoy(request):
     caja = CajaDiaria.objects.filter(fecha=hoy).first()
     movimientos = caja.movimientos.all() if caja else []
 
+    ingresos = caja.movimientos.filter(tipo=MovimientoCaja.TIPO_INGRESO).aggregate(total=Sum("monto"))["total"] or 0
+    egresos = caja.movimientos.filter(tipo=MovimientoCaja.TIPO_EGRESO).aggregate(total=Sum("monto"))["total"] or 0
+
+
     context = {
         "caja":        caja,
         "hoy":         hoy,
         "movimientos": movimientos,
+        "ingresos": ingresos,
+        "egresos": egresos,
+        
     }
     return render(request, "pagos/caja.html", context)
 

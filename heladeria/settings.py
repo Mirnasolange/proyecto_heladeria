@@ -54,6 +54,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                "apps.core.context_processors.carrito_context",
             ],
         },
     },
@@ -112,3 +113,24 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+
+# ─────────────────────────────────────────────────────────────
+# Agregá esto al final de heladeria/settings.py
+# ─────────────────────────────────────────────────────────────
+
+# ── Email ──────────────────────────────────────────────────
+# Para desarrollo: imprime los emails en la consola (sin SMTP real)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Para producción con Gmail, comentá la línea de arriba
+# y descomentá estas (necesitás una contraseña de aplicación de Google):
+# EMAIL_BACKEND   = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST      = 'smtp.gmail.com'
+# EMAIL_PORT      = 587
+# EMAIL_USE_TLS   = True
+# EMAIL_HOST_USER = 'tumail@gmail.com'
+# EMAIL_HOST_PASSWORD = 'tu_contraseña_de_aplicacion'
+# DEFAULT_FROM_EMAIL  = 'Heladería <tumail@gmail.com>'
+
+EMAIL_HELADERIA = 'heladeria@ejemplo.com'   # email del local (recibe copia de pedidos)

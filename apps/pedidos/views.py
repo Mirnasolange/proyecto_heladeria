@@ -9,6 +9,9 @@ from django.views.decorators.http import require_POST
 from apps.productos.models import Producto, Sabor, Topping
 from .models import Pedido, ItemPedido, ItemPedidoSabor, ItemPedidoTopping
 from apps.pagos.models import Pago, CajaDiaria, MovimientoCaja
+from apps.core.emails import notificar_pedido_recibido
+from apps.core.emails import notificar_pedido_listo, notificar_en_camino
+
 
 
 # ─────────────────────────────────────────────
@@ -235,6 +238,9 @@ def checkout(request):
                 descripcion = f"Pedido {pedido.numero} – {pedido.get_metodo_pago_principal_display()}",
             )
 
+        # ── Notificar por email ──
+        notificar_pedido_recibido(pedido)
+
         # ── Limpiar carrito ──
         set_carrito(request, [])
 
@@ -291,6 +297,10 @@ def cambiar_estado(request, numero):
     if nuevo_estado in estados_validos:
         pedido.estado = nuevo_estado
         pedido.save(update_fields=["estado"])
+        if nuevo_estado == Pedido.ESTADO_LISTO:
+            notificar_pedido_listo(pedido)
+        elif nuevo_estado == Pedido.ESTADO_EN_CAMINO:
+            notificar_en_camino(pedido)
         messages.success(request, f"Estado actualizado a: {pedido.get_estado_display()}")
     else:
         messages.error(request, "Estado inválido.")

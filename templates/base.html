@@ -229,13 +229,13 @@
         <li class="nav-item me-2">
           <a class="nav-link" href="{% url 'pedidos:carrito' %}">
             <i class="bi bi-bag"></i>
-            {% if request.session.carrito %}
-              <span class="carrito-badge">
-                {{ request.session.carrito|length }}
-              </span>
+            {% if carrito_cantidad %}
+              <span class="carrito-badge">{{ carrito_cantidad }}</span>
             {% endif %}
           </a>
         </li>
+
+
         <!-- Acceso panel (visible siempre para el dueño; en producción se puede ocultar) -->
         <li class="nav-item">
           <a class="nav-link" href="{% url 'pedidos:gestion' %}">

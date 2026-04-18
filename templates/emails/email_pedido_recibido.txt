@@ -1,0 +1,14 @@
+Hola {{ pedido.cliente_nombre }},
+
+¡Recibimos tu pedido correctamente!
+
+Número: {{ pedido.numero }}
+Entrega: {{ pedido.get_tipo_entrega_display }}
+{% if pedido.direccion_entrega %}Dirección: {{ pedido.direccion_entrega }}{% endif %}
+Pago: {{ pedido.get_metodo_pago_principal_display }}
+Total: ${{ pedido.total }}
+
+Te avisaremos cuando esté listo.
+
+¡Gracias por elegirnos! 🍦
+Heladería
