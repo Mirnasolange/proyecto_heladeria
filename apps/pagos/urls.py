@@ -1,0 +1,15 @@
+from django.urls import path
+from . import views
+
+app_name = 'pagos'
+
+urlpatterns = [
+    path('caja/',                views.caja_hoy,           name='caja_hoy'),
+    path('caja/abrir/',          views.abrir_caja,         name='abrir_caja'),
+    path('caja/cerrar/',         views.cerrar_caja,        name='cerrar_caja'),
+    path('caja/egreso/',         views.registrar_egreso,   name='egreso'),
+    path('metricas/',            views.metricas,           name='metricas'),
+    path('stock/',               views.stock,              name='stock'),
+    path('stock/ajuste/',        views.ajuste_stock,       name='ajuste_stock'),
+    path('proveedores/export/',  views.exportar_proveedores, name='exportar_proveedores'),
+]

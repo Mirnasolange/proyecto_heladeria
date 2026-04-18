@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Checkout – Heladería{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row g-5 justify-content-center">
+
+    <!-- Formulario -->
+    <div class="col-lg-6">
+      <h1 class="fw-bold mb-4">Finalizá tu pedido</h1>
+
+      <form method="POST">
+        {% csrf_token %}
+
+        <!-- Datos personales -->
+        <h5 class="fw-bold mb-3">Tus datos</h5>
+        <div class="mb-3">
+          <label class="form-label">Nombre *</label>
+          <input type="text" name="nombre" class="form-control" required
+                 placeholder="¿Cómo te llamás?">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Teléfono *</label>
+          <input type="tel" name="telefono" class="form-control" required
+                 placeholder="11 1234-5678">
+        </div>
+
+        <!-- Tipo de entrega -->
+        <h5 class="fw-bold mb-3 mt-4">Entrega</h5>
+        <div class="d-flex gap-3 mb-3" id="opciones-entrega">
+          <label class="flex-grow-1">
+            <input type="radio" name="tipo_entrega" value="RETIRO"
+                   class="entrega-radio visually-hidden" checked>
+            <div class="card-helado p-3 text-center entrega-opcion activa">
+              <i class="bi bi-shop fs-3 d-block mb-1 text-turquesa"></i>
+              <strong>Retiro</strong>
+              <p class="text-muted small mb-0">Lo buscás en el local</p>
+            </div>
+          </label>
+          <label class="flex-grow-1">
+            <input type="radio" name="tipo_entrega" value="DELIVERY"
+                   class="entrega-radio visually-hidden">
+            <div class="card-helado p-3 text-center entrega-opcion">
+              <i class="bi bi-truck fs-3 d-block mb-1 text-turquesa"></i>
+              <strong>Delivery</strong>
+              <p class="text-muted small mb-0">Te lo llevamos</p>
+            </div>
+          </label>
+        </div>
+
+        <div id="campo-direccion" class="mb-3" style="display:none">
+          <label class="form-label">Dirección de entrega *</label>
+          <input type="text" name="direccion_entrega" class="form-control"
+                 placeholder="Calle, número, piso, departamento">
+        </div>
+
+        <!-- Método de pago -->
+        <h5 class="fw-bold mb-3 mt-4">Método de pago</h5>
+        <div class="mb-3">
+          <select name="metodo_pago" class="form-select" id="select-pago">
+            <option value="EFECTIVO">Efectivo</option>
+            <option value="MERCADOPAGO">MercadoPago</option>
+            <option value="MIXTO">Mixto (efectivo + MP)</option>
+          </select>
+        </div>
+
+        <!-- Pago mixto -->
+        <div id="pago-mixto" style="display:none" class="mb-3">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label small">Monto en efectivo</label>
+              <input type="number" name="monto_efectivo" class="form-control"
+                     placeholder="$0" min="0">
+            </div>
+            <div class="col-6">
+              <label class="form-label small">Monto en MP</label>
+              <input type="number" name="monto_mp" class="form-control"
+                     placeholder="$0" min="0">
+            </div>
+          </div>
+        </div>
+
+        <!-- Comentarios generales -->
+        <div class="mb-4">
+          <label class="form-label">Comentarios generales <small class="text-muted">(opcional)</small></label>
+          <textarea name="comentarios" class="form-control" rows="2"
+                    placeholder="Horario estimado, aclaraciones, etc."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-turquesa w-100 py-3 fs-5 fw-bold">
+          <i class="bi bi-check-circle me-2"></i>Confirmar pedido
+        </button>
+      </form>
+    </div>
+
+    <!-- Resumen del pedido -->
+    <div class="col-lg-4">
+      <div class="card-helado p-4 sticky-top" style="top:1rem">
+        <h5 class="fw-bold mb-3">Resumen</h5>
+
+        {% for item in carrito %}
+        <div class="d-flex justify-content-between mb-2">
+          <div>
+            <span class="fw-500">{{ item.producto_nombre }}</span>
+            {% if item.sabores_nombres %}
+              <br><small class="text-muted">{{ item.sabores_nombres|join:", " }}</small>
+            {% endif %}
+            {% if item.toppings_nombres %}
+              <br><small class="text-muted">+ {{ item.toppings_nombres|join:", " }}</small>
+            {% endif %}
+            <br><small class="text-muted">x{{ item.cantidad }}</small>
+          </div>
+          <span class="text-turquesa fw-bold">${{ item.subtotal|floatformat:0 }}</span>
+        </div>
+        <hr class="my-2">
+        {% endfor %}
+
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <strong class="fs-5">Total</strong>
+          <strong class="fs-4 text-turquesa">${{ total|floatformat:0 }}</strong>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Entrega: toggle visual
+  document.querySelectorAll(".entrega-radio").forEach(radio => {
+    radio.addEventListener("change", () => {
+      document.querySelectorAll(".entrega-opcion").forEach(el => {
+        el.classList.remove("activa");
+        el.style.borderColor = "";
+      });
+      radio.closest("label").querySelector(".entrega-opcion").classList.add("activa");
+      radio.closest("label").querySelector(".entrega-opcion").style.borderColor = "var(--turquesa)";
+      document.getElementById("campo-direccion").style.display =
+        radio.value === "DELIVERY" ? "block" : "none";
+    });
+  });
+
+  // Pago mixto
+  document.getElementById("select-pago").addEventListener("change", function() {
+    document.getElementById("pago-mixto").style.display =
+      this.value === "MIXTO" ? "block" : "none";
+  });
+</script>
+{% endblock %}

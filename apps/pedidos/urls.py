@@ -1,0 +1,19 @@
+from django.urls import path
+from . import views
+
+app_name = 'pedidos'
+
+urlpatterns = [
+    # Web (cliente)
+    path('carrito/',           views.carrito,           name='carrito'),
+    path('carrito/agregar/',   views.agregar_al_carrito, name='agregar_carrito'),
+    path('carrito/quitar/',    views.quitar_del_carrito, name='quitar_carrito'),
+    path('checkout/',          views.checkout,           name='checkout'),
+    path('confirmado/<str:numero>/', views.pedido_confirmado, name='confirmado'),
+
+    # Panel interno (gestión)
+    path('gestion/',                       views.gestion_pedidos,  name='gestion'),
+    path('gestion/<str:numero>/',          views.detalle_pedido,   name='detalle'),
+    path('gestion/<str:numero>/estado/',   views.cambiar_estado,   name='cambiar_estado'),
+    path('gestion/nuevo/',                 views.venta_rapida,     name='venta_rapida'),
+]

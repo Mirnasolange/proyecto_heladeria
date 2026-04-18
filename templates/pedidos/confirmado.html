@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Pedido confirmado – Heladería{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center" style="max-width:560px">
+
+  <div style="font-size:5rem">✅</div>
+  <h1 class="fw-bold mt-3 mb-1">¡Pedido recibido!</h1>
+  <p class="lead text-muted mb-4">
+    Tu número de pedido es <strong class="text-turquesa">{{ pedido.numero }}</strong>
+  </p>
+
+  <div class="card-helado p-4 text-start mb-4">
+    <dl class="row mb-0">
+      <dt class="col-5 text-muted">Cliente</dt>
+      <dd class="col-7">{{ pedido.cliente_nombre }}</dd>
+
+      <dt class="col-5 text-muted">Entrega</dt>
+      <dd class="col-7">{{ pedido.get_tipo_entrega_display }}</dd>
+
+      {% if pedido.direccion_entrega %}
+      <dt class="col-5 text-muted">Dirección</dt>
+      <dd class="col-7">{{ pedido.direccion_entrega }}</dd>
+      {% endif %}
+
+      <dt class="col-5 text-muted">Pago</dt>
+      <dd class="col-7">{{ pedido.get_metodo_pago_principal_display }}</dd>
+
+      <dt class="col-5 text-muted">Total</dt>
+      <dd class="col-7 fw-bold text-turquesa">${{ pedido.total|floatformat:0 }}</dd>
+
+      <dt class="col-5 text-muted">Estado</dt>
+      <dd class="col-7">
+        <span class="badge badge-{{ pedido.estado }} px-3 py-2">
+          {{ pedido.get_estado_display }}
+        </span>
+      </dd>
+    </dl>
+  </div>
+
+  <p class="text-muted small mb-4">
+    Te avisaremos por teléfono cuando tu pedido esté listo.
+  </p>
+
+  <a href="{% url 'core:homepage' %}" class="btn btn-turquesa px-4 py-2">
+    Volver al inicio
+  </a>
+
+</div>
+{% endblock %}

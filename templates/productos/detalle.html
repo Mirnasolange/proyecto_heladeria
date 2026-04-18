@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}{{ producto.nombre }} – Heladería{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:680px">
+
+  <a href="{% url 'productos:catalogo' %}" class="text-muted small mb-3 d-inline-block">
+    ← Volver al menú
+  </a>
+
+  <h1 class="fw-bold mb-1">{{ producto.nombre }}</h1>
+  <p class="text-muted mb-1">{{ producto.get_tipo_display }}</p>
+  <p class="fs-4 fw-bold text-turquesa mb-4">${{ producto.precio }}</p>
+
+  {% if producto.descripcion %}
+    <p class="text-muted mb-4">{{ producto.descripcion }}</p>
+  {% endif %}
+
+  <form method="POST" action="{% url 'pedidos:agregar_carrito' %}">
+    {% csrf_token %}
+    <input type="hidden" name="producto_id" value="{{ producto.pk }}">
+
+    <!-- Cantidad -->
+    <div class="mb-4">
+      <label class="form-label fw-bold">Cantidad</label>
+      <div class="d-flex align-items-center gap-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-menos">−</button>
+        <input type="number" name="cantidad" id="cantidad" value="1" min="1" max="10"
+               class="form-control text-center" style="width:70px">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-mas">+</button>
+      </div>
+    </div>
+
+    <!-- Sabores (solo para helados) -->
+    {% if producto.es_helado %}
+    <div class="mb-4">
+      <label class="form-label fw-bold">
+        Sabores
+        <small class="text-muted fw-normal">(máx. {{ limite_sabores }})</small>
+      </label>
+      <p class="text-muted small mb-2">
+        Si querés combinar más de {{ limite_sabores }}, aclaralo en comentarios.
+      </p>
+
+      <div class="row g-2" id="contenedor-sabores">
+        {% for sabor in sabores %}
+        <div class="col-6 col-md-4">
+          <label class="w-100">
+            <input type="checkbox" name="sabores_ids" value="{{ sabor.id }}"
+                   class="sabor-check visually-hidden">
+            <div class="p-2 border rounded text-center sabor-label" style="cursor:pointer;transition:all .15s">
+              <small>{{ sabor.nombre }}</small>
+            </div>
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+      <div id="aviso-limite" class="text-danger small mt-2 d-none">
+        Máximo {{ limite_sabores }} sabores. Aclará el resto en comentarios.
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Toppings -->
+    {% if toppings %}
+    <div class="mb-4">
+      <label class="form-label fw-bold">
+        Toppings
+        <small class="text-muted fw-normal">(1 gratis · +$100 c/u adicional)</small>
+      </label>
+      <div class="row g-2">
+        {% for topping in toppings %}
+        <div class="col-6 col-md-4">
+          <label class="w-100">
+            <input type="checkbox" name="toppings_ids" value="{{ topping.id }}"
+                   class="topping-check visually-hidden">
+            <div class="p-2 border rounded text-center topping-label" style="cursor:pointer;transition:all .15s">
+              <small>{{ topping.nombre }}</small>
+            </div>
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Comentarios -->
+    <div class="mb-4">
+      <label class="form-label fw-bold">Comentarios <small class="text-muted fw-normal">(opcional)</small></label>
+      <textarea name="comentarios" class="form-control" rows="2"
+                placeholder="Ej: más chocolate que vainilla, sin maní, etc."></textarea>
+    </div>
+
+    <!-- Resumen de precio -->
+    <div class="alert alert-light border mb-4" id="resumen-precio">
+      <div class="d-flex justify-content-between">
+        <span>Precio unitario</span>
+        <span id="precio-base">${{ producto.precio }}</span>
+      </div>
+      <div class="d-flex justify-content-between text-muted small" id="fila-toppings" style="display:none!important">
+        <span>Toppings extra</span>
+        <span id="precio-toppings">$0</span>
+      </div>
+      <hr class="my-2">
+      <div class="d-flex justify-content-between fw-bold">
+        <span>Subtotal</span>
+        <span id="precio-total" class="text-turquesa">${{ producto.precio }}</span>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-turquesa w-100 py-2 fs-5">
+      <i class="bi bi-bag-plus me-2"></i>Agregar al carrito
+    </button>
+  </form>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const PRECIO_BASE   = {{ producto.precio }};
+  const LIMITE        = {{ limite_sabores }};
+  const PRECIO_TOPPING_EXTRA = 100;
+
+  // ── Cantidad ──
+  document.getElementById("btn-menos").addEventListener("click", () => {
+    const inp = document.getElementById("cantidad");
+    if (parseInt(inp.value) > 1) { inp.value = parseInt(inp.value) - 1; actualizar(); }
+  });
+  document.getElementById("btn-mas").addEventListener("click", () => {
+    const inp = document.getElementById("cantidad");
+    if (parseInt(inp.value) < 10) { inp.value = parseInt(inp.value) + 1; actualizar(); }
+  });
+
+  // ── Sabores: estilo toggle + límite ──
+  document.querySelectorAll(".sabor-check").forEach(chk => {
+    chk.addEventListener("change", () => {
+      const seleccionados = document.querySelectorAll(".sabor-check:checked");
+      if (seleccionados.length > LIMITE) {
+        chk.checked = false;
+        document.getElementById("aviso-limite").classList.remove("d-none");
+        return;
+      }
+      document.getElementById("aviso-limite").classList.add("d-none");
+      chk.closest("label").querySelector(".sabor-label").style.background =
+        chk.checked ? "var(--turquesa)" : "";
+      chk.closest("label").querySelector(".sabor-label").style.color =
+        chk.checked ? "#fff" : "";
+      chk.closest("label").querySelector(".sabor-label").style.borderColor =
+        chk.checked ? "var(--turquesa)" : "";
+    });
+  });
+
+  // ── Toppings: estilo toggle ──
+  document.querySelectorAll(".topping-check").forEach(chk => {
+    chk.addEventListener("change", () => {
+      chk.closest("label").querySelector(".topping-label").style.background =
+        chk.checked ? "var(--madera)" : "";
+      chk.closest("label").querySelector(".topping-label").style.color =
+        chk.checked ? "#fff" : "";
+      chk.closest("label").querySelector(".topping-label").style.borderColor =
+        chk.checked ? "var(--madera)" : "";
+      actualizar();
+    });
+  });
+
+  document.getElementById("cantidad").addEventListener("input", actualizar);
+
+  function actualizar() {
+    const cantidad  = parseInt(document.getElementById("cantidad").value) || 1;
+    const nTop      = document.querySelectorAll(".topping-check:checked").length;
+    const extraTop  = Math.max(0, nTop - 1) * PRECIO_TOPPING_EXTRA;
+    const subtotal  = (PRECIO_BASE * cantidad) + extraTop;
+
+    document.getElementById("precio-total").textContent = "$" + subtotal.toFixed(0);
+    if (extraTop > 0) {
+      document.getElementById("fila-toppings").style.removeProperty("display");
+      document.getElementById("precio-toppings").textContent = "+$" + extraTop;
+    } else {
+      document.getElementById("fila-toppings").style.display = "none";
+    }
+  }
+</script>
+{% endblock %}

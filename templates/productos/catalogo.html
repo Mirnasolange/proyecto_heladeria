@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Productos – Heladería{% endblock %}
+{% block nav_productos %}active{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+  <h1 class="fw-bold mb-1">Nuestro menú</h1>
+  <p class="text-muted mb-4">Elegí tu tamaño, los sabores que más te gusten y los toppings.</p>
+
+  <!-- Filtros -->
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{% url 'productos:catalogo' %}"
+       class="btn btn-sm {% if not tipo_filtro %}btn-chocolate{% else %}btn-outline-secondary{% endif %}">
+      Todos
+    </a>
+    {% for valor, etiqueta in tipos %}
+    <a href="{% url 'productos:catalogo' %}?tipo={{ valor }}"
+       class="btn btn-sm {% if tipo_filtro == valor %}btn-chocolate{% else %}btn-outline-secondary{% endif %}">
+      {{ etiqueta }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Grid de productos -->
+  <div class="row g-4">
+    {% for producto in productos %}
+    <div class="col-6 col-md-4 col-lg-3">
+      <div class="card-helado h-100 d-flex flex-column p-3 text-center">
+        <div style="font-size:3rem;margin-bottom:.5rem">
+          {% if producto.tipo == "postre" %}🍮
+          {% elif producto.tipo == "helado_cuarto" %}🍦
+          {% elif producto.tipo == "helado_medio" %}🍨
+          {% else %}🍧{% endif %}
+        </div>
+        <h6 class="fw-bold mb-1">{{ producto.nombre }}</h6>
+        <small class="text-muted">{{ producto.get_tipo_display }}</small>
+        {% if producto.descripcion %}
+          <p class="text-muted small mt-1 mb-2">{{ producto.descripcion }}</p>
+        {% endif %}
+        <p class="fw-bold text-turquesa mt-auto mb-2">${{ producto.precio }}</p>
+        {% if producto.es_helado %}
+          <small class="text-muted d-block mb-2">
+            Hasta {{ producto.limite_sabores }} sabores
+          </small>
+        {% endif %}
+        <a href="{% url 'productos:detalle' producto.pk %}"
+           class="btn btn-turquesa btn-sm">
+          {% if producto.es_helado %}Elegir sabores{% else %}Agregar{% endif %}
+        </a>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+      <p class="text-muted fs-5">No hay productos disponibles en este momento.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}
