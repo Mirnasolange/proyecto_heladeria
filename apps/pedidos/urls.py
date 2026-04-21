@@ -15,8 +15,9 @@ urlpatterns = [
     path('gestion/',                       views.gestion_pedidos,  name='gestion'),
     path('gestion/<str:numero>/',          views.detalle_pedido,   name='detalle'),
     path('gestion/<str:numero>/estado/',   views.cambiar_estado,   name='cambiar_estado'),
-    path('gestion/nuevo/',                 views.venta_rapida,     name='venta_rapida'),
     path('pos/',            views.pos,          name='pos'),
     path('pos/cobrar/',     views.pos_cobrar,   name='pos_cobrar'),
     path('repartos/',      views.repartos,    name='repartos'),
+    path('cancelar/', views.cancelar_venta, name='cancelar_venta'),
+
 ]

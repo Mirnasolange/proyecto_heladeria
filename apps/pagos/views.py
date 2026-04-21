@@ -2,13 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, Count, Avg
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from decimal import Decimal
-import datetime
+import datetime, json
 
 from .models import CajaDiaria, MovimientoCaja, AjusteStock, InsumoStock, Pago
 from apps.pedidos.models import Pedido, ItemPedido, ItemPedidoSabor
 from apps.productos.models import Sabor, Producto
+from django.views.decorators.http import require_POST, require_GET
 
 
 # ─────────────────────────────────────────────
@@ -318,3 +319,155 @@ def exportar_proveedores(request):
     response["Content-Disposition"] = 'attachment; filename="pedido_proveedores.xlsx"'
     wb.save(response)
     return response
+
+# ─────────────────────────────────────────────
+# VISTAS AJAX PARA POS
+#────────────────────────────────────────────
+@require_GET
+def pos_movimientos(request):
+    """
+    Devuelve JSON con todos los movimientos del día (ventas POS + manuales).
+    Separa efectivo vs MP en ventas mixtas.
+    """
+    import datetime
+    from django.utils import timezone
+    from apps.pedidos.models import Pedido, ItemPedido
+    from apps.pagos.models import CajaDiaria, MovimientoCaja, Pago
+ 
+    fecha_str = request.GET.get("fecha", str(timezone.now().date()))
+    try:
+        fecha = datetime.date.fromisoformat(fecha_str)
+    except ValueError:
+        fecha = timezone.now().date()
+ 
+    movimientos = []
+    total_ventas = Decimal("0")
+    total_egresos = Decimal("0")
+ 
+    caja = CajaDiaria.objects.filter(fecha=fecha).first()
+    if caja:
+        for mov in caja.movimientos.select_related("pedido").order_by("fecha"):
+            entry = {
+                "hora":        mov.fecha.strftime("%H:%M"),
+                "tipo":        mov.tipo,
+                "total":       float(mov.monto),
+                "descripcion": mov.descripcion,
+                "numero":      mov.pedido.numero if mov.pedido else None,
+                "metodo":      mov.pedido.metodo_pago_principal if mov.pedido else None,
+                "items":       [],
+            }
+ 
+            if mov.pedido:
+                entry["tipo"] = "VENTA"
+                for item in mov.pedido.items.select_related("producto").all():
+                    nombre = item.producto.nombre if item.producto else item.comentarios
+                    entry["items"].append({
+                        "cantidad":  item.cantidad,
+                        "nombre":    nombre,
+                        "subtotal":  float(item.subtotal),
+                    })
+                total_ventas += mov.monto
+            elif mov.tipo == MovimientoCaja.TIPO_EGRESO:
+                entry["tipo"] = "EGRESO"
+                total_egresos += mov.monto
+            else:
+                entry["tipo"] = "INGRESO_MANUAL"
+ 
+            movimientos.append(entry)
+ 
+    balance = float(total_ventas) - float(total_egresos)
+    return JsonResponse({
+        "movimientos": movimientos,
+        "resumen": {
+            "ventas":   float(total_ventas),
+            "egresos":  float(total_egresos),
+            "balance":  balance,
+        }
+    })
+ 
+ #────────────────────────────────────────────
+ # VISTA AJAX PARA REGISTRAR MOVIMIENTOS MANUALES EN POS
+ #────────────────────────────────────────────
+@require_POST
+def pos_movimiento_manual(request):
+    """Registra un ingreso o egreso manual en la caja del día."""
+    from django.utils import timezone
+    try:
+        data   = json.loads(request.body)
+        tipo   = data.get("tipo")
+        monto  = Decimal(str(data.get("monto", 0)))
+        motivo = data.get("motivo", "").strip()
+ 
+        if not motivo:
+            return JsonResponse({"ok": False, "error": "El motivo es obligatorio."})
+        if monto <= 0:
+            return JsonResponse({"ok": False, "error": "El monto debe ser mayor a 0."})
+        if tipo not in [MovimientoCaja.TIPO_INGRESO, MovimientoCaja.TIPO_EGRESO]:
+            return JsonResponse({"ok": False, "error": "Tipo inválido."})
+ 
+        hoy  = timezone.now().date()
+        caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
+        if not caja:
+            return JsonResponse({"ok": False, "error": "No hay caja abierta hoy."})
+ 
+        MovimientoCaja.objects.create(
+            caja=caja, tipo=tipo, monto=monto, descripcion=motivo
+        )
+        caja.calcular_cierre_esperado()
+        caja.save(update_fields=["monto_cierre_esperado"])
+ 
+        return JsonResponse({"ok": True})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)})
+ 
+ #────────────────────────────────────────────
+ # VISTA AJAX PARA RESUMEN DE CORTE EN POS
+ #────────────────────────────────────────────
+@require_GET
+def pos_corte(request):
+    """
+    Devuelve el resumen del corte del día:
+    - ventas en efectivo (incluye parte efectivo de mixtos)
+    - ventas en MP (incluye parte MP de mixtos)
+    - ingresos manuales
+    - egresos
+    - total esperado en caja física (efectivo + ingresos - egresos)
+    """
+    from django.utils import timezone
+    from apps.pedidos.models import Pedido
+    from apps.pagos.models import Pago
+ 
+    hoy  = timezone.now().date()
+    caja = CajaDiaria.objects.filter(fecha=hoy).first()
+ 
+    ventas_ef    = Decimal("0")
+    ventas_mp    = Decimal("0")
+    ingresos_man = Decimal("0")
+    egresos      = Decimal("0")
+ 
+    if caja:
+        for mov in caja.movimientos.select_related("pedido").all():
+            if mov.pedido:
+                # Desagregar pagos mixtos
+                for pago in mov.pedido.pagos.all():
+                    if pago.estado == Pago.ESTADO_APROBADO:
+                        if pago.tipo == Pago.TIPO_EFECTIVO:
+                            ventas_ef += pago.monto
+                        else:
+                            ventas_mp += pago.monto
+            elif mov.tipo == MovimientoCaja.TIPO_INGRESO:
+                ingresos_man += mov.monto
+            elif mov.tipo == MovimientoCaja.TIPO_EGRESO:
+                egresos += mov.monto
+ 
+    efectivo_esperado = ventas_ef + ingresos_man - egresos
+    total_esperado    = efectivo_esperado  # MP no entra en caja física
+ 
+    return JsonResponse({
+        "ventas_efectivo":    float(ventas_ef),
+        "ventas_mp":          float(ventas_mp),
+        "ingresos_manuales":  float(ingresos_man),
+        "egresos":            float(egresos),
+        "efectivo_esperado":  float(efectivo_esperado),
+        "total_esperado":     float(total_esperado),
+    })

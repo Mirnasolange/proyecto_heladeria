@@ -13,4 +13,7 @@ urlpatterns = [
     path('stock/ajuste/',        views.ajuste_stock,       name='ajuste_stock'),
     path('proveedores/export/',  views.exportar_proveedores, name='exportar_proveedores'),
     path('stock/alerta-email/',  views.alerta_stock_email, name='alerta_stock_email'),
+    path('pos/movimientos/',       views.pos_movimientos,       name='pos_movimientos'),
+    path('pos/movimiento-manual/', views.pos_movimiento_manual, name='pos_movimiento_manual'),
+    path('pos/corte/',             views.pos_corte,             name='pos_corte'),
 ]

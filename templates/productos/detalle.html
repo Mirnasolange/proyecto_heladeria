@@ -3,57 +3,35 @@
 
 {% block extra_css %}
 .sabor-label, .topping-label {
-  display: block;
-  padding: 10px 8px;
-  border: 2px solid #dee2e6;
-  border-radius: 10px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .15s;
-  background: #fff;
-  font-size: .88rem;
-  user-select: none;
+  display:block; padding:10px 8px; border:2px solid #dee2e6; border-radius:10px;
+  text-align:center; cursor:pointer; transition:all .15s; background:#fff;
+  font-size:.88rem; user-select:none;
 }
-.sabor-label:hover  { border-color: var(--turquesa); color: var(--turquesa); }
-.topping-label:hover{ border-color: var(--madera);   color: var(--madera); }
+.sabor-label:hover:not(.agotado-label)  { border-color:var(--turquesa); color:var(--turquesa); }
+.topping-label:hover { border-color:var(--madera); color:var(--madera); }
 
-/* Estado seleccionado: CSS puro, sin JS */
-.sabor-check:checked  + .sabor-label  {
-  background: var(--turquesa);
-  border-color: var(--turquesa);
-  color: #fff;
-  font-weight: 600;
+.sabor-check:checked  + .sabor-label  { background:var(--turquesa); border-color:var(--turquesa); color:#fff; font-weight:600; }
+.topping-check:checked + .topping-label { background:var(--madera); border-color:var(--madera); color:#fff; font-weight:600; }
+
+.sabor-check, .topping-check { position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+
+/* Sabor agotado */
+.agotado-label {
+  background:#f5f5f5 !important; color:#aaa !important; border-color:#e0e0e0 !important;
+  cursor:not-allowed !important; text-decoration:line-through;
 }
-.topping-check:checked + .topping-label {
-  background: var(--madera);
-  border-color: var(--madera);
-  color: #fff;
-  font-weight: 600;
-}
-/* Ocultar el input sin romper el :checked */
-.sabor-check, .topping-check {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
+.agotado-label::after { content:" ✕"; font-size:.75rem; }
 {% endblock %}
 
 {% block content %}
 <div class="container py-5" style="max-width:680px">
 
-  <a href="{% url 'productos:catalogo' %}" class="text-muted small mb-3 d-inline-block">
-    ← Volver al menú
-  </a>
+  <a href="{% url 'productos:catalogo' %}" class="text-muted small mb-3 d-inline-block">← Volver al menú</a>
 
   <h1 class="fw-bold mb-1">{{ producto.nombre }}</h1>
   <p class="text-muted mb-1">{{ producto.get_tipo_display }}</p>
   <p class="fs-4 fw-bold text-turquesa mb-4">${{ producto.precio }}</p>
-
-  {% if producto.descripcion %}
-    <p class="text-muted mb-4">{{ producto.descripcion }}</p>
-  {% endif %}
+  {% if producto.descripcion %}<p class="text-muted mb-4">{{ producto.descripcion }}</p>{% endif %}
 
   <form method="POST" action="{% url 'pedidos:agregar_carrito' %}">
     {% csrf_token %}
@@ -63,33 +41,45 @@
     <div class="mb-4">
       <label class="form-label fw-bold">Cantidad</label>
       <div class="d-flex align-items-center gap-3">
-        <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btn-menos">−</button>
+        <button type="button" class="btn btn-outline-secondary px-3" id="btn-menos"
+                style="font-size:1.2rem;line-height:1;min-width:44px;min-height:44px">−</button>
         <input type="number" name="cantidad" id="cantidad" value="1" min="1" max="10"
-               class="form-control text-center fw-bold" style="width:70px" readonly>
-        <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btn-mas">+</button>
+               class="form-control text-center fw-bold" style="width:80px;font-size:1.1rem" readonly>
+        <button type="button" class="btn btn-outline-secondary px-3" id="btn-mas"
+                style="font-size:1.2rem;line-height:1;min-width:44px;min-height:44px">+</button>
       </div>
     </div>
 
-    <!-- Sabores (solo helados) -->
+    <!-- Sabores -->
     {% if producto.es_helado %}
     <div class="mb-4">
       <label class="form-label fw-bold">
-        Sabores
-        <span class="text-muted fw-normal">(máx. {{ limite_sabores }})</span>
+        Sabores <span class="text-muted fw-normal">(máx. {{ limite_sabores }})</span>
       </label>
       <p class="text-muted small mb-3">
-        Si querés combinar más de {{ limite_sabores }}, aclaralo en comentarios.
+        Podés elegir hasta {{ limite_sabores }}. Si querés combinar más, aclaralo en comentarios.
       </p>
 
-      <div class="row g-2" id="contenedor-sabores">
+      <!-- Contador visual -->
+      <div class="d-flex align-items-center gap-2 mb-3">
+        {% for i in limite_sabores_range %}
+          <div class="sabor-slot rounded-circle border"
+               style="width:12px;height:12px;background:#dee2e6;transition:background .2s"
+               data-slot="{{ i }}"></div>
+        {% endfor %}
+        <span id="contador-sabores" class="text-muted small ms-1">0 / {{ limite_sabores }}</span>
+      </div>
+
+      <div class="row g-2">
         {% for sabor in sabores %}
         <div class="col-4">
           <label>
-            <input type="checkbox"
-                   name="sabores_ids"
-                   value="{{ sabor.id }}"
-                   class="sabor-check">
-            <span class="sabor-label">{{ sabor.nombre }}</span>
+            <input type="checkbox" name="sabores_ids" value="{{ sabor.id }}"
+                   class="sabor-check"
+                   {% if not sabor.disponible %}disabled{% endif %}>
+            <span class="sabor-label {% if not sabor.disponible %}agotado-label{% endif %}">
+              {{ sabor.nombre }}
+            </span>
           </label>
         </div>
         {% endfor %}
@@ -97,7 +87,7 @@
 
       <div id="aviso-limite" class="alert alert-warning py-2 mt-3 d-none">
         <i class="bi bi-exclamation-triangle me-1"></i>
-        Máximo {{ limite_sabores }} sabores. Si querés más, aclaralo en comentarios.
+        Llegaste al máximo de {{ limite_sabores }} sabores. Si querés más, aclaralo en comentarios.
       </div>
     </div>
     {% endif %}
@@ -106,17 +96,13 @@
     {% if toppings %}
     <div class="mb-4">
       <label class="form-label fw-bold">
-        Toppings
-        <span class="text-muted fw-normal small">(1 gratis · +$100 c/u adicional)</span>
+        Toppings <span class="text-muted fw-normal small">(1 gratis · +$100 c/u adicional)</span>
       </label>
       <div class="row g-2">
         {% for topping in toppings %}
         <div class="col-4">
           <label>
-            <input type="checkbox"
-                   name="toppings_ids"
-                   value="{{ topping.id }}"
-                   class="topping-check">
+            <input type="checkbox" name="toppings_ids" value="{{ topping.id }}" class="topping-check">
             <span class="topping-label">{{ topping.nombre }}</span>
           </label>
         </div>
@@ -128,14 +114,13 @@
     <!-- Comentarios -->
     <div class="mb-4">
       <label class="form-label fw-bold">
-        Comentarios
-        <span class="text-muted fw-normal small">(opcional)</span>
+        Comentarios <span class="text-muted fw-normal small">(opcional)</span>
       </label>
       <textarea name="comentarios" class="form-control" rows="2"
-                placeholder="Ej: más chocolate que vainilla, sin maní, etc."></textarea>
+                placeholder="Ej: más chocolate que vainilla, sin maní..."></textarea>
     </div>
 
-    <!-- Resumen de precio -->
+    <!-- Resumen precio -->
     <div class="card border rounded-3 mb-4 p-3" style="background:var(--gris-suave)">
       <div class="d-flex justify-content-between mb-1">
         <span class="text-muted small">Precio unitario</span>
@@ -143,12 +128,12 @@
       </div>
       <div id="fila-toppings" class="d-flex justify-content-between mb-1" style="display:none!important">
         <span class="text-muted small">Toppings extra</span>
-        <span class="small" id="precio-toppings">$0</span>
+        <span class="small fw-bold" id="precio-toppings"></span>
       </div>
       <hr class="my-2">
       <div class="d-flex justify-content-between fw-bold">
         <span>Subtotal</span>
-        <span class="text-turquesa" id="precio-total">${{ producto.precio }}</span>
+        <span class="text-turquesa fs-5" id="precio-total">${{ producto.precio }}</span>
       </div>
     </div>
 
@@ -156,7 +141,6 @@
       <i class="bi bi-bag-plus me-2"></i>Agregar al carrito
     </button>
   </form>
-
 </div>
 {% endblock %}
 
@@ -166,7 +150,7 @@
   const LIMITE               = {{ limite_sabores }};
   const PRECIO_TOPPING_EXTRA = 100;
 
-  // ── Cantidad ──────────────────────────────────────
+  // Botones cantidad — tamaño touch-friendly, sin depender de los nativos
   document.getElementById("btn-menos").addEventListener("click", () => {
     const inp = document.getElementById("cantidad");
     if (parseInt(inp.value) > 1) { inp.value = parseInt(inp.value) - 1; actualizar(); }
@@ -176,39 +160,50 @@
     if (parseInt(inp.value) < 10) { inp.value = parseInt(inp.value) + 1; actualizar(); }
   });
 
-  // ── Límite de sabores ─────────────────────────────
+  // Sabores: límite inmediato + contador visual
   document.querySelectorAll(".sabor-check").forEach(chk => {
     chk.addEventListener("change", () => {
       const sel = document.querySelectorAll(".sabor-check:checked");
       if (sel.length > LIMITE) {
-        chk.checked = false;   // revertir
+        chk.checked = false;
         document.getElementById("aviso-limite").classList.remove("d-none");
+        setTimeout(() => document.getElementById("aviso-limite").classList.add("d-none"), 3000);
         return;
       }
       document.getElementById("aviso-limite").classList.add("d-none");
+      actualizarContador(sel.length);
       actualizar();
     });
   });
 
-  // ── Precio dinámico ───────────────────────────────
+  function actualizarContador(n) {
+    document.getElementById("contador-sabores").textContent = n + " / " + LIMITE;
+    document.querySelectorAll(".sabor-slot").forEach((slot, i) => {
+      slot.style.background = i < n ? "var(--turquesa)" : "#dee2e6";
+    });
+  }
+
+  // Toppings
   document.querySelectorAll(".topping-check").forEach(chk => {
     chk.addEventListener("change", actualizar);
   });
 
+  // Subtotal reactivo
   function actualizar() {
-    const cantidad  = parseInt(document.getElementById("cantidad").value) || 1;
-    const nTop      = document.querySelectorAll(".topping-check:checked").length;
-    const extraTop  = Math.max(0, nTop - 1) * PRECIO_TOPPING_EXTRA;
-    const subtotal  = (PRECIO_BASE * cantidad) + extraTop;
+    const cantidad = parseInt(document.getElementById("cantidad").value) || 1;
+    const nTop     = document.querySelectorAll(".topping-check:checked").length;
+    const extraTop = Math.max(0, nTop - 1) * PRECIO_TOPPING_EXTRA;
+    const subtotal = (PRECIO_BASE * cantidad) + extraTop;
 
-    document.getElementById("precio-total").textContent = "$" + subtotal.toLocaleString("es-AR");
+    document.getElementById("precio-total").textContent =
+      "$" + subtotal.toLocaleString("es-AR", {minimumFractionDigits:0});
 
-    const filaToppings = document.getElementById("fila-toppings");
+    const fila = document.getElementById("fila-toppings");
     if (extraTop > 0) {
-      filaToppings.style.removeProperty("display");
+      fila.style.removeProperty("display");
       document.getElementById("precio-toppings").textContent = "+$" + extraTop.toLocaleString("es-AR");
     } else {
-      filaToppings.style.display = "none";
+      fila.style.display = "none";
     }
   }
 </script>

@@ -23,10 +23,7 @@
          class="nav-link {% block menu_pedidos %}{% endblock %}">
         <i class="bi bi-receipt"></i> Pedidos
       </a>
-      <a href="{% url 'pedidos:venta_rapida' %}"
-         class="nav-link {% block menu_venta %}{% endblock %}">
-        <i class="bi bi-lightning-charge"></i> Venta rápida
-      </a>
+
       <a href="{% url 'pagos:caja_hoy' %}"
          class="nav-link {% block menu_caja %}{% endblock %}">
         <i class="bi bi-cash-stack"></i> Caja

@@ -28,5 +28,6 @@ def detalle_producto(request, pk):
         "sabores":        sabores,
         "toppings":       toppings,
         "limite_sabores": producto.limite_sabores,
+        "limite_sabores_range":   range(producto.limite_sabores),
     }
     return render(request, "productos/detalle.html", context)

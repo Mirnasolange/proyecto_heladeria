@@ -204,6 +204,17 @@ def checkout(request):
         # ── Calcular total real ──
         pedido.calcular_total()
 
+
+        # ── Descontar stock ──
+        for item in carrito_items:
+            try:
+                from apps.productos.models import Producto
+                producto = Producto.objects.get(pk=item["producto_id"])
+                producto.descontar_stock(item["cantidad"])
+            except Exception:
+                pass  # no romper si algo falla      
+
+
         # ── Registrar pagos ──
         if metodo_pago == Pedido.PAGO_MIXTO:
             if monto_efectivo:
@@ -227,18 +238,24 @@ def checkout(request):
                 monto=pedido.total, estado=Pago.ESTADO_PENDIENTE
             )
 
-        # ── Registrar en caja del día (si está abierta) ──
-        from django.utils import timezone
-        hoy = timezone.now().date()
-        caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
-        if caja:
-            MovimientoCaja.objects.create(
-                caja        = caja,
-                pedido      = pedido,
-                tipo        = MovimientoCaja.TIPO_INGRESO,
-                monto       = pedido.total,
-                descripcion = f"Pedido {pedido.numero} – {pedido.get_metodo_pago_principal_display()}",
-            )
+        # ── Registrar en caja (según tipo de pago) ──
+        es_delivery_efectivo = (
+            entrega == Pedido.ENTREGA_DELIVERY and
+            metodo_pago in [Pedido.PAGO_EFECTIVO, Pedido.PAGO_MIXTO]
+        )
+
+        if not es_delivery_efectivo:
+            from django.utils import timezone
+            hoy = timezone.now().date()
+            caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
+            if caja:
+                MovimientoCaja.objects.create(
+                    caja=caja,
+                    pedido=pedido,
+                    tipo=MovimientoCaja.TIPO_INGRESO,
+                    monto=pedido.total,
+                    descripcion=f"Pedido {pedido.numero} – {pedido.get_metodo_pago_principal_display()}",
+                )            
 
         # ── Notificar por email ──
         notificar_pedido_recibido(pedido)
@@ -299,6 +316,32 @@ def cambiar_estado(request, numero):
     if nuevo_estado in estados_validos:
         pedido.estado = nuevo_estado
         pedido.save(update_fields=["estado"])
+
+        # ── Registrar caja si es delivery efectivo entregado ──
+        if (nuevo_estado == Pedido.ESTADO_ENTREGADO and
+            pedido.tipo_entrega == Pedido.ENTREGA_DELIVERY and
+            pedido.metodo_pago_principal in [Pedido.PAGO_EFECTIVO, Pedido.PAGO_MIXTO]):
+
+            from django.utils import timezone
+            from apps.pagos.models import CajaDiaria, MovimientoCaja
+
+            hoy  = timezone.now().date()
+            caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
+
+            if caja:
+                ya_registrado = pedido.movimientos_caja.exists()
+                if not ya_registrado:
+                    MovimientoCaja.objects.create(
+                        caja=caja,
+                        pedido=pedido,
+                        tipo=MovimientoCaja.TIPO_INGRESO,
+                        monto=pedido.total,
+                        descripcion=f"Delivery entregado – {pedido.numero}",
+                    )
+                    caja.calcular_cierre_esperado()
+                    caja.save(update_fields=["monto_cierre_esperado"])
+
+        # ── Notificaciones por cambio de estado ──
         if nuevo_estado == Pedido.ESTADO_LISTO:
             notificar_pedido_listo(pedido)
         elif nuevo_estado == Pedido.ESTADO_EN_CAMINO:
@@ -308,63 +351,6 @@ def cambiar_estado(request, numero):
         messages.error(request, "Estado inválido.")
     return redirect("pedidos:detalle", numero=numero)
 
-
-# ─────────────────────────────────────────────
-# VENTA RÁPIDA (MOSTRADOR)
-# ─────────────────────────────────────────────
-
-def venta_rapida(request):
-    productos = Producto.objects.filter(activo=True)
-
-    if request.method == "POST":
-        producto_id = request.POST.get("producto_id")
-        cantidad    = int(request.POST.get("cantidad", 1))
-        metodo_pago = request.POST.get("metodo_pago", Pedido.PAGO_EFECTIVO)
-        nombre      = request.POST.get("nombre", "Mostrador")
-        telefono    = request.POST.get("telefono", "-")
-
-        producto = get_object_or_404(Producto, pk=producto_id)
-
-        pedido = Pedido.objects.create(
-            cliente_nombre        = nombre,
-            cliente_telefono      = telefono,
-            tipo_pedido           = Pedido.TIPO_MOSTRADOR,
-            tipo_entrega          = Pedido.ENTREGA_RETIRO,
-            estado                = Pedido.ESTADO_LISTO,
-            metodo_pago_principal = metodo_pago,
-        )
-        item = ItemPedido.objects.create(
-            pedido          = pedido,
-            producto        = producto,
-            cantidad        = cantidad,
-            precio_unitario = producto.precio,
-            subtotal        = producto.precio * cantidad,
-        )
-        pedido.calcular_total()
-
-        Pago.objects.create(
-            pedido  = pedido,
-            tipo    = Pago.TIPO_EFECTIVO if metodo_pago == Pedido.PAGO_EFECTIVO else Pago.TIPO_MP,
-            monto   = pedido.total,
-            estado  = Pago.ESTADO_APROBADO,
-        )
-
-        from django.utils import timezone
-        hoy  = timezone.now().date()
-        caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
-        if caja:
-            MovimientoCaja.objects.create(
-                caja        = caja,
-                pedido      = pedido,
-                tipo        = MovimientoCaja.TIPO_INGRESO,
-                monto       = pedido.total,
-                descripcion = f"Venta rápida – {producto.nombre}",
-            )
-
-        messages.success(request, f"Venta registrada: {pedido.numero}")
-        return redirect("pedidos:gestion")
-
-    return render(request, "pedidos/venta_rapida.html", {"productos": productos})
 
 # ─────────────────────────────────────────────
 # REPARTOS (DELIVERY)
@@ -406,29 +392,24 @@ def pos(request):
 
 @require_POST
 def pos_cobrar(request):
-    """
-    Recibe JSON con la venta del POS y crea el pedido + pago + movimiento de caja.
-    Devuelve JSON con el número de pedido o error.
-    """
-    from apps.productos.models import Producto
     from apps.pagos.models import CajaDiaria, MovimientoCaja, Pago
+    from apps.productos.models import Producto
     from django.utils import timezone
 
     try:
-        data        = json.loads(request.body)
-        items_data  = data.get("items", [])
-        metodo_pago = data.get("metodo_pago", "EFECTIVO")
+        data         = json.loads(request.body)
+        items_data   = data.get("items", [])
+        metodo_pago  = data.get("metodo_pago", "EFECTIVO")
         monto_pagado = Decimal(str(data.get("monto_pagado", "0")))
-        nombre      = data.get("nombre", "Mostrador").strip() or "Mostrador"
-        telefono    = data.get("telefono", "-").strip() or "-"
+        monto_mp     = Decimal(str(data.get("monto_mp", "0")))
+        nombre       = data.get("nombre", "Mostrador").strip() or "Mostrador"
 
         if not items_data:
             return JsonResponse({"ok": False, "error": "Sin ítems"}, status=400)
 
-        # Crear pedido
         pedido = Pedido.objects.create(
             cliente_nombre        = nombre,
-            cliente_telefono      = telefono,
+            cliente_telefono      = "-",
             tipo_pedido           = Pedido.TIPO_MOSTRADOR,
             tipo_entrega          = Pedido.ENTREGA_RETIRO,
             estado                = Pedido.ESTADO_LISTO,
@@ -436,51 +417,104 @@ def pos_cobrar(request):
         )
 
         for it in items_data:
-            producto = Producto.objects.get(pk=it["producto_id"])
-            cantidad = int(it.get("cantidad", 1))
-            subtotal = producto.precio * cantidad
-            ItemPedido.objects.create(
-                pedido          = pedido,
-                producto        = producto,
-                cantidad        = cantidad,
-                precio_unitario = producto.precio,
-                subtotal        = subtotal,
-                comentarios     = it.get("comentarios", ""),
-            )
+            es_libre = it.get("libre", False)
+
+            if es_libre:
+                # Ítem de precio y descripción libre — no tiene producto en BD
+                precio   = Decimal(str(it.get("libre_precio", 0)))
+                cantidad = int(it.get("cantidad", 1))
+                ItemPedido.objects.create(
+                    pedido          = pedido,
+                    producto        = None,          # null permitido
+                    cantidad        = cantidad,
+                    precio_unitario = precio,
+                    subtotal        = precio * cantidad,
+                    comentarios     = it.get("libre_desc", "Ítem libre"),
+                )
+            else:
+                producto = Producto.objects.get(pk=it["producto_id"])
+                cantidad = int(it.get("cantidad", 1))
+                subtotal = producto.precio * cantidad
+
+                ItemPedido.objects.create(
+                    pedido          = pedido,
+                    producto        = producto,
+                    cantidad        = cantidad,
+                    precio_unitario = producto.precio,
+                    subtotal        = subtotal,
+                )
+
+                # ── Descontar stock del producto e insumo asociado ──
+                producto.descontar_stock(cantidad)
 
         pedido.calcular_total()
 
-        # Pago
-        tipo_pago = Pago.TIPO_EFECTIVO if metodo_pago == "EFECTIVO" else Pago.TIPO_MP
-        Pago.objects.create(
-            pedido  = pedido,
-            tipo    = tipo_pago,
-            monto   = pedido.total,
-            estado  = Pago.ESTADO_APROBADO,
-        )
+        # ── Pagos ──
+        if metodo_pago == "MIXTO":
+            if monto_pagado > 0:
+                Pago.objects.create(pedido=pedido, tipo=Pago.TIPO_EFECTIVO, monto=monto_pagado, estado=Pago.ESTADO_APROBADO)
+            if monto_mp > 0:
+                Pago.objects.create(pedido=pedido, tipo=Pago.TIPO_MP, monto=monto_mp, estado=Pago.ESTADO_APROBADO)
+        elif metodo_pago == "MERCADOPAGO":
+            Pago.objects.create(pedido=pedido, tipo=Pago.TIPO_MP, monto=pedido.total, estado=Pago.ESTADO_APROBADO)
+        else:
+            Pago.objects.create(pedido=pedido, tipo=Pago.TIPO_EFECTIVO, monto=pedido.total, estado=Pago.ESTADO_APROBADO)
 
-        # Movimiento de caja
+        # ── Caja ──
         hoy  = timezone.now().date()
         caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
         if caja:
             MovimientoCaja.objects.create(
-                caja        = caja,
-                pedido      = pedido,
-                tipo        = MovimientoCaja.TIPO_INGRESO,
-                monto       = pedido.total,
-                descripcion = f"POS – {pedido.numero}",
+                caja=caja, pedido=pedido,
+                tipo=MovimientoCaja.TIPO_INGRESO,
+                monto=pedido.total,
+                descripcion=f"POS – {pedido.numero} – {nombre}",
             )
             caja.calcular_cierre_esperado()
             caja.save(update_fields=["monto_cierre_esperado"])
 
-        vuelto = float(monto_pagado) - float(pedido.total) if metodo_pago == "EFECTIVO" else 0
+        vuelto = float(monto_pagado) - float(pedido.total) if metodo_pago in ["EFECTIVO", "MIXTO"] else 0
 
-        return JsonResponse({
-            "ok":     True,
-            "numero": pedido.numero,
-            "total":  float(pedido.total),
-            "vuelto": max(0, vuelto),
-        })
+        return JsonResponse({"ok": True, "numero": pedido.numero, "total": float(pedido.total), "vuelto": max(0, vuelto)})
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({"ok": False, "error": str(e)}, status=500)
+    
+    # ── Cancelar venta ──────────────────────────────────
+@require_POST
+def cancelar_venta(request):
+    """Cambia el estado del pedido a CANCELADO y revierte el movimiento de caja."""
+    from apps.pagos.models import CajaDiaria, MovimientoCaja
+    from django.utils import timezone
+    try:
+        data   = json.loads(request.body)
+        numero = data.get("numero")
+        pedido = Pedido.objects.get(numero=numero)
+ 
+        if pedido.estado == Pedido.ESTADO_CANCELADO:
+            return JsonResponse({"ok": False, "error": "Ya estaba cancelado."})
+ 
+        pedido.estado = Pedido.ESTADO_CANCELADO
+        pedido.save(update_fields=["estado"])
+ 
+        # Revertir movimiento de caja: crear egreso compensatorio
+        hoy  = timezone.now().date()
+        caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
+        if caja and pedido.movimientos_caja.filter(tipo=MovimientoCaja.TIPO_INGRESO).exists():
+            MovimientoCaja.objects.create(
+                caja        = caja,
+                pedido      = pedido,
+                tipo        = MovimientoCaja.TIPO_EGRESO,
+                monto       = pedido.total,
+                descripcion = f"Cancelación {pedido.numero}",
+            )
+            caja.calcular_cierre_esperado()
+            caja.save(update_fields=["monto_cierre_esperado"])
+ 
+        return JsonResponse({"ok": True})
+    except Pedido.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "Pedido no encontrado."})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)})
