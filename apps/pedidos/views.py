@@ -392,40 +392,119 @@ def pos(request):
 
 @require_POST
 def pos_cobrar(request):
-    from apps.pagos.models import CajaDiaria, MovimientoCaja, Pago
-    from apps.productos.models import Producto
-    from django.utils import timezone
+    """
+    Recibe JSON:
+    {
+      "items": [...],
+      "pagos": [
+        {"tipo": "EFECTIVO", "subtipo": "", "monto": 1500, "referencia": ""},
+        {"tipo": "DIGITAL",  "subtipo": "MERCADOPAGO", "monto": 500, "referencia": "ABC123"}
+      ],
+      "nombre": "Juan"
+    }
+    Reglas:
+    - Máximo 2 pagos
+    - La suma de pagos debe >= total del pedido (si excede se devuelve cambio, no es error)
+    - Efectivo no requiere subtipo ni referencia
+    - Tarjeta requiere subtipo (DEBITO / CREDITO)
+    - Digital requiere subtipo (MERCADOPAGO / TRANSFERENCIA)
+    """
 
     try:
-        data         = json.loads(request.body)
-        items_data   = data.get("items", [])
-        metodo_pago  = data.get("metodo_pago", "EFECTIVO")
-        monto_pagado = Decimal(str(data.get("monto_pagado", "0")))
-        monto_mp     = Decimal(str(data.get("monto_mp", "0")))
-        nombre       = data.get("nombre", "Mostrador").strip() or "Mostrador"
+        data       = json.loads(request.body)
+        items_data = data.get("items", [])
+        pagos_data = data.get("pagos", [])
+        nombre     = data.get("nombre", "Mostrador").strip() or "Mostrador"
 
+        # ── Validaciones de entrada ──────────────────────────────
         if not items_data:
-            return JsonResponse({"ok": False, "error": "Sin ítems"}, status=400)
+            return JsonResponse({"ok": False, "error": "Sin ítems en el ticket."}, status=400)
 
+        if not pagos_data:
+            return JsonResponse({"ok": False, "error": "Agregá al menos un pago."}, status=400)
+
+        if len(pagos_data) > 2:
+            return JsonResponse({"ok": False, "error": "Máximo 2 formas de pago."}, status=400)
+
+        # Validar estructura de cada pago antes de tocar la BD
+        SUBTIPOS_POR_TIPO = {
+            Pago.TIPO_TARJETA: [Pago.SUBTIPO_DEBITO, Pago.SUBTIPO_CREDITO],
+            Pago.TIPO_DIGITAL: [Pago.SUBTIPO_MERCADOPAGO, Pago.SUBTIPO_TRANSFERENCIA],
+        }
+        TIPOS_VALIDOS = [Pago.TIPO_EFECTIVO, Pago.TIPO_TARJETA, Pago.TIPO_DIGITAL]
+
+        suma_pagos = Decimal("0")
+        for i, p in enumerate(pagos_data, 1):
+            tipo    = p.get("tipo", "")
+            subtipo = p.get("subtipo", "")
+            monto   = p.get("monto")
+
+            if tipo not in TIPOS_VALIDOS:
+                return JsonResponse({"ok": False, "error": f"Pago {i}: tipo inválido '{tipo}'."}, status=400)
+
+            if monto is None or not str(monto).strip():
+                return JsonResponse({"ok": False, "error": f"Pago {i}: ingresá el monto."}, status=400)
+
+            try:
+                monto_dec = Decimal(str(monto))
+            except Exception:
+                return JsonResponse({"ok": False, "error": f"Pago {i}: monto inválido."}, status=400)
+
+            if monto_dec <= 0:
+                return JsonResponse({"ok": False, "error": f"Pago {i}: el monto debe ser mayor a 0."}, status=400)
+
+            if tipo in SUBTIPOS_POR_TIPO:
+                validos = SUBTIPOS_POR_TIPO[tipo]
+                if subtipo not in validos:
+                    return JsonResponse({
+                        "ok": False,
+                        "error": f"Pago {i}: seleccioná el subtipo ({' / '.join(validos)})."
+                    }, status=400)
+
+            suma_pagos += monto_dec
+
+        # ── Calcular total del ticket para validar cobertura ─────
+        # (lo hacemos aquí, antes de crear nada, para no dejar pedidos huérfanos)
+        total_ticket = Decimal("0")
+        for it in items_data:
+            if it.get("libre"):
+                total_ticket += Decimal(str(it.get("libre_precio", 0))) * int(it.get("cantidad", 1))
+            else:
+                prod = Producto.objects.get(pk=it["producto_id"])
+                total_ticket += prod.precio * int(it.get("cantidad", 1))
+
+        if suma_pagos < total_ticket:
+            falta = total_ticket - suma_pagos
+            return JsonResponse({
+                "ok": False,
+                "error": f"Los pagos suman ${float(suma_pagos):,.0f} pero el total es ${float(total_ticket):,.0f}. Falta ${float(falta):,.0f}."
+            }, status=400)
+
+        # ── Determinar método principal para el pedido ───────────
+        tipos_usados = list({p["tipo"] for p in pagos_data})
+        if len(tipos_usados) == 1:
+            metodo_principal = tipos_usados[0]
+        else:
+            metodo_principal = "MIXTO"
+
+        # ── Crear pedido ─────────────────────────────────────────
         pedido = Pedido.objects.create(
             cliente_nombre        = nombre,
             cliente_telefono      = "-",
             tipo_pedido           = Pedido.TIPO_MOSTRADOR,
             tipo_entrega          = Pedido.ENTREGA_RETIRO,
             estado                = Pedido.ESTADO_LISTO,
-            metodo_pago_principal = metodo_pago,
+            metodo_pago_principal = metodo_principal,
         )
 
+        # ── Crear ítems + descontar stock ────────────────────────
         for it in items_data:
-            es_libre = it.get("libre", False)
-
-            if es_libre:
-                # Ítem de precio y descripción libre — no tiene producto en BD
+            if it.get("libre"):
                 precio   = Decimal(str(it.get("libre_precio", 0)))
                 cantidad = int(it.get("cantidad", 1))
                 ItemPedido.objects.create(
                     pedido          = pedido,
-                    producto        = None,          # null permitido
+                    producto        = None,
                     cantidad        = cantidad,
                     precio_unitario = precio,
                     subtotal        = precio * cantidad,
@@ -434,49 +513,59 @@ def pos_cobrar(request):
             else:
                 producto = Producto.objects.get(pk=it["producto_id"])
                 cantidad = int(it.get("cantidad", 1))
-                subtotal = producto.precio * cantidad
-
                 ItemPedido.objects.create(
                     pedido          = pedido,
                     producto        = producto,
                     cantidad        = cantidad,
                     precio_unitario = producto.precio,
-                    subtotal        = subtotal,
+                    subtotal        = producto.precio * cantidad,
                 )
-
-                # ── Descontar stock del producto e insumo asociado ──
                 producto.descontar_stock(cantidad)
 
         pedido.calcular_total()
 
-        # ── Pagos ──
-        if metodo_pago == "MIXTO":
-            if monto_pagado > 0:
-                Pago.objects.create(pedido=pedido, tipo=Pago.TIPO_EFECTIVO, monto=monto_pagado, estado=Pago.ESTADO_APROBADO)
-            if monto_mp > 0:
-                Pago.objects.create(pedido=pedido, tipo=Pago.TIPO_MP, monto=monto_mp, estado=Pago.ESTADO_APROBADO)
-        elif metodo_pago == "MERCADOPAGO":
-            Pago.objects.create(pedido=pedido, tipo=Pago.TIPO_MP, monto=pedido.total, estado=Pago.ESTADO_APROBADO)
-        else:
-            Pago.objects.create(pedido=pedido, tipo=Pago.TIPO_EFECTIVO, monto=pedido.total, estado=Pago.ESTADO_APROBADO)
+        # ── Crear pagos ──────────────────────────────────────────
+        for p in pagos_data:
+            Pago.objects.create(
+                pedido     = pedido,
+                tipo       = p["tipo"],
+                subtipo    = p.get("subtipo", ""),
+                monto      = Decimal(str(p["monto"])),
+                estado     = Pago.ESTADO_APROBADO,
+                referencia = p.get("referencia", "").strip(),
+            )
 
-        # ── Caja ──
+        # ── Registrar en caja ────────────────────────────────────
+        # Solo el efectivo entra en caja física; digital/tarjeta se registran
+        # igual para trazabilidad pero marcados en la descripción.
         hoy  = timezone.now().date()
         caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
         if caja:
             MovimientoCaja.objects.create(
-                caja=caja, pedido=pedido,
-                tipo=MovimientoCaja.TIPO_INGRESO,
-                monto=pedido.total,
-                descripcion=f"POS – {pedido.numero} – {nombre}",
+                caja        = caja,
+                pedido      = pedido,
+                tipo        = MovimientoCaja.TIPO_INGRESO,
+                monto       = pedido.total,
+                descripcion = f"POS – {pedido.numero} – {nombre}",
             )
             caja.calcular_cierre_esperado()
             caja.save(update_fields=["monto_cierre_esperado"])
 
-        vuelto = float(monto_pagado) - float(pedido.total) if metodo_pago in ["EFECTIVO", "MIXTO"] else 0
+        # Vuelto: solo aplica si hay pago en efectivo
+        monto_ef = sum(
+            Decimal(str(p["monto"])) for p in pagos_data if p["tipo"] == Pago.TIPO_EFECTIVO
+        )
+        vuelto = max(Decimal("0"), suma_pagos - pedido.total) if monto_ef > 0 else Decimal("0")
 
-        return JsonResponse({"ok": True, "numero": pedido.numero, "total": float(pedido.total), "vuelto": max(0, vuelto)})
+        return JsonResponse({
+            "ok":     True,
+            "numero": pedido.numero,
+            "total":  float(pedido.total),
+            "vuelto": float(vuelto),
+        })
 
+    except Producto.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "Producto no encontrado."}, status=400)
     except Exception as e:
         import traceback
         traceback.print_exc()

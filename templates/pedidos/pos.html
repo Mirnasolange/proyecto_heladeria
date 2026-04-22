@@ -14,6 +14,7 @@
 }
 body { background: var(--pos-bg) !important; color: var(--pos-text) !important; }
 
+/* ── Layout ── */
 #pos-wrapper {
   display: grid;
   grid-template-columns: 1fr 400px;
@@ -21,6 +22,8 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
   height: 100vh;
   overflow: hidden;
 }
+
+/* ── Header ── */
 #pos-header {
   grid-column: 1 / -1;
   background: var(--pos-panel);
@@ -29,36 +32,41 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
   display: flex; align-items: center; gap: 12px;
 }
 #pos-header h1 { font-size:1rem; font-weight:700; color:var(--pos-accent); margin:0; white-space:nowrap; }
-.kbd { font-size:.65rem; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
-       border-radius:3px; padding:1px 5px; color:var(--pos-muted); }
+.kbd {
+  font-size:.65rem; background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.15); border-radius:3px;
+  padding:1px 5px; color:var(--pos-muted);
+}
 
+/* ── Búsqueda ── */
 #pos-search {
   flex:1; max-width:300px;
   background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
-  color:var(--pos-text); border-radius:6px; padding:5px 12px; font-size:.85rem; outline:none;
+  color:var(--pos-text); border-radius:6px; padding:5px 12px;
+  font-size:.85rem; outline:none;
 }
 #pos-search:focus { border-color:var(--pos-accent); }
 #pos-search::placeholder { color:var(--pos-muted); }
 
-/* Tabs productos */
+/* ── Tabs ── */
 .pos-tabs { display:flex; gap:4px; }
 .pos-tab {
-  padding:4px 10px; border-radius:5px; font-size:.75rem; font-weight:600; cursor:pointer;
-  border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); color:var(--pos-muted);
-  transition:all .12s;
+  padding:4px 10px; border-radius:5px; font-size:.75rem; font-weight:600;
+  cursor:pointer; border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05); color:var(--pos-muted); transition:all .12s;
 }
 .pos-tab.activo { background:var(--pos-accent); border-color:var(--pos-accent); color:#fff; }
 
-/* Grid productos */
+/* ── Grid productos ── */
 #pos-productos {
   overflow-y:auto; padding:12px;
-  display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px;
-  align-content:start; background:var(--pos-bg);
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+  gap:8px; align-content:start; background:var(--pos-bg);
 }
 .prod-card {
-  background:var(--pos-panel); border:1px solid rgba(255,255,255,.06); border-radius:10px;
-  padding:12px 8px; text-align:center; cursor:pointer; transition:all .12s; user-select:none;
-  position:relative;
+  background:var(--pos-panel); border:1px solid rgba(255,255,255,.06);
+  border-radius:10px; padding:12px 8px; text-align:center;
+  cursor:pointer; transition:all .12s; user-select:none; position:relative;
 }
 .prod-card:hover { border-color:var(--pos-accent); background:var(--pos-card); transform:translateY(-2px); }
 .prod-card.agotado { opacity:.4; pointer-events:none; }
@@ -66,13 +74,12 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
   position:absolute; top:6px; right:6px; background:var(--pos-warn);
   color:#fff; font-size:.6rem; font-weight:700; padding:1px 5px; border-radius:3px;
 }
-.prod-emoji { font-size:1.8rem; display:block; margin-bottom:4px; }
+.prod-emoji  { font-size:1.8rem; display:block; margin-bottom:4px; }
 .prod-nombre { font-size:.78rem; font-weight:600; line-height:1.2; }
 .prod-tipo   { font-size:.68rem; color:var(--pos-muted); margin-top:2px; }
 .prod-precio { font-size:.9rem; font-weight:700; color:var(--pos-accent); margin-top:5px; }
-.prod-shortcut { font-size:.6rem; color:var(--pos-muted); margin-top:2px; }
 
-/* Ticket */
+/* ── Ticket ── */
 #pos-ticket {
   background:var(--pos-panel); border-left:1px solid rgba(255,255,255,.07);
   display:grid; grid-template-rows:auto 1fr auto; overflow:hidden;
@@ -80,7 +87,6 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
 #ticket-header { padding:12px 14px 8px; border-bottom:1px solid rgba(255,255,255,.07); }
 #ticket-header h2 { font-size:.9rem; font-weight:700; margin:0; }
 #ticket-lista { overflow-y:auto; padding:8px 14px; }
-
 .ticket-item {
   display:flex; align-items:center; gap:6px;
   padding:7px 0; border-bottom:1px solid rgba(255,255,255,.04);
@@ -89,52 +95,43 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
 .ti-tipo   { font-size:.68rem; color:var(--pos-muted); display:block; }
 .ti-qty    { display:flex; align-items:center; gap:3px; }
 .ti-btn {
-  width:20px; height:20px; border-radius:3px; background:rgba(255,255,255,.08);
-  border:none; color:var(--pos-text); font-size:.85rem; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
+  width:20px; height:20px; border-radius:3px;
+  background:rgba(255,255,255,.08); border:none; color:var(--pos-text);
+  font-size:.85rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
 }
 .ti-btn:hover { background:var(--pos-warn); }
 .ti-qty-num { width:26px; text-align:center; font-size:.82rem; font-weight:600; }
 .ti-precio  { font-size:.82rem; font-weight:700; min-width:60px; text-align:right; color:var(--pos-accent); }
 #ticket-vacio { text-align:center; color:var(--pos-muted); padding:30px 16px; font-size:.82rem; }
 
-/* Cobro */
+/* ── Panel cobro (sidebar) ── */
 #pos-cobro { border-top:1px solid rgba(255,255,255,.07); padding:12px 14px; }
-#cobro-total-wrap { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+#cobro-total-wrap { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
 #cobro-label { font-size:.72rem; color:var(--pos-muted); text-transform:uppercase; letter-spacing:1px; }
 #cobro-total { font-size:1.8rem; font-weight:700; color:var(--pos-accent); }
 
-.metodo-btns { display:flex; gap:5px; margin-bottom:8px; }
-.metodo-btn {
-  flex:1; padding:6px 4px; border-radius:6px; border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.05); color:var(--pos-text); font-size:.72rem; font-weight:600;
-  cursor:pointer; transition:all .12s; text-align:center;
-}
-.metodo-btn.activo { background:var(--pos-accent); border-color:var(--pos-accent); color:#fff; }
-
-.pos-input {
-  width:100%; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
-  color:var(--pos-text); border-radius:6px; padding:7px 10px; font-size:1rem; font-weight:600;
-  outline:none; margin-bottom:6px;
-}
-.pos-input:focus { border-color:var(--pos-accent); }
-.pos-input::placeholder { color:var(--pos-muted); font-weight:400; font-size:.82rem; }
-#cobro-vuelto { font-size:.88rem; font-weight:600; text-align:center; min-height:18px; margin-bottom:8px; }
-
-/* Caja info */
 #caja-info {
   background:rgba(46,196,182,.08); border:1px solid rgba(46,196,182,.2);
   border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:.75rem;
   display:flex; justify-content:space-between; align-items:center;
 }
-#caja-info.sin-caja { background:rgba(233,69,96,.08); border-color:rgba(233,69,96,.2); color:#f87171; }
 
 .fn-btns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:6px; }
 .fn-btn {
   padding:5px 2px; border-radius:5px; border:1px solid rgba(255,255,255,.1);
-  background:rgba(255,255,255,.04); color:var(--pos-muted); font-size:.68rem; cursor:pointer; text-align:center;
+  background:rgba(255,255,255,.04); color:var(--pos-muted);
+  font-size:.68rem; cursor:pointer; text-align:center;
 }
 .fn-btn:hover { border-color:var(--pos-accent); color:var(--pos-accent); }
+
+.pos-input {
+  width:100%; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+  color:var(--pos-text); border-radius:6px; padding:7px 10px;
+  font-size:.95rem; font-weight:600; outline:none; margin-bottom:6px;
+  box-sizing:border-box;
+}
+.pos-input:focus { border-color:var(--pos-accent); }
+.pos-input::placeholder { color:var(--pos-muted); font-weight:400; font-size:.82rem; }
 
 .pos-btn {
   width:100%; padding:10px; border-radius:7px; font-size:.9rem; font-weight:700;
@@ -147,76 +144,99 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
 #btn-cancelar { background:rgba(233,69,96,.15); color:var(--pos-warn); border:1px solid rgba(233,69,96,.3); }
 #btn-cancelar:hover { background:var(--pos-warn); color:#fff; }
 
-/* Modal confirmación */
-#modal-ok {
-  display:none; position:fixed; inset:0; background:rgba(0,0,0,.8);
-  z-index:999; align-items:center; justify-content:center;
-}
-#modal-ok.visible { display:flex; }
-#modal-inner {
-  background:var(--pos-panel); border:1px solid rgba(255,255,255,.1);
-  border-radius:14px; padding:28px; text-align:center; max-width:320px; width:90%;
-}
-#modal-numero { font-size:1.8rem; font-weight:700; color:var(--pos-accent); }
-#modal-vuelto { font-size:1.2rem; font-weight:700; color:#4ade80; margin-top:6px; }
-
-/* Modal ítem libre */
-#modal-libre {
-  display:none; position:fixed; inset:0; background:rgba(0,0,0,.8);
-  z-index:998; align-items:center; justify-content:center;
-}
-#modal-libre.visible { display:flex; }
-#modal-libre-inner {
-  background:var(--pos-panel); border:1px solid rgba(255,255,255,.1);
-  border-radius:14px; padding:24px; max-width:340px; width:90%;
-}
-#modal-libre-inner h3 { font-size:1rem; font-weight:700; margin-bottom:16px; }
-
-/* Modal abrir caja */
-#modal-caja {
-  display:none; position:fixed; inset:0; background:rgba(0,0,0,.8);
-  z-index:997; align-items:center; justify-content:center;
-}
-#modal-caja.visible { display:flex; }
-#modal-caja-inner {
-  background:var(--pos-panel); border:1px solid rgba(255,255,255,.1);
-  border-radius:14px; padding:24px; max-width:340px; width:90%;
-}
-
-/* CSS adicional para el MODAL DE COBRO */
-#modal-cobro {
-  display:none; position:fixed; inset:0;
-  background:rgba(0,0,0,.82); z-index:1000;
+/* ── Modales base ── */
+.pos-modal {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.85);
   align-items:center; justify-content:center;
 }
-#modal-cobro.visible { display:flex; }
-#modal-cobro-inner {
+.pos-modal.visible { display:flex; }
+.pos-modal-inner {
   background:var(--pos-panel); border:1px solid rgba(255,255,255,.1);
-  border-radius:14px; padding:24px; width:90%; max-width:380px;
-  max-height:90vh; overflow-y:auto;
+  border-radius:14px; padding:22px; width:92%; max-height:92vh; overflow-y:auto;
+}
+.modal-header {
+  display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;
+}
+.modal-header h3 { margin:0; font-size:1rem; font-weight:700; }
+.modal-close {
+  background:none; border:none; color:var(--pos-muted); font-size:1.2rem; cursor:pointer;
 }
 
-/* CSS modales movimientos y corte */
-#modal-movimientos, #modal-corte {
-  display:none; position:fixed; inset:0;
-  background:rgba(0,0,0,.85); z-index:1001;
-  align-items:center; justify-content:center;
+/* ── Modal cobro ── */
+#modal-cobro       { z-index:1000; }
+#modal-cobro-inner { max-width:440px; }
+
+.pago-fila {
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+  border-radius:8px; padding:10px 12px; margin-bottom:8px;
 }
-#modal-movimientos.visible, #modal-corte.visible { display:flex; }
-#modal-mov-inner {
-  background:var(--pos-panel); border:1px solid rgba(255,255,255,.1);
-  border-radius:14px; padding:20px; width:92%; max-width:520px;
-  max-height:92vh; overflow-y:auto;
+.pago-grid {
+  display:grid; gap:6px; margin-bottom:6px;
 }
-#modal-corte-inner {
-  background:var(--pos-panel); border:1px solid rgba(255,255,255,.1);
-  border-radius:14px; padding:24px; width:92%; max-width:400px;
+.pago-grid.cols-2 { grid-template-columns:1fr 1fr; }
+.pago-grid.cols-3 { grid-template-columns:1fr 1fr auto; }
+.pago-sel {
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+  color:var(--pos-text); border-radius:6px; padding:6px 8px;
+  font-size:.82rem; outline:none; width:100%;
 }
- 
-/* Ticket item en movimientos */
+.pago-sel:focus { border-color:var(--pos-accent); }
+.pago-monto-input {
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+  color:var(--pos-text); border-radius:6px; padding:6px 8px;
+  font-size:.9rem; font-weight:700; outline:none; width:100%;
+}
+.pago-monto-input:focus { border-color:var(--pos-accent); }
+.pago-ref-input {
+  width:100%; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+  color:var(--pos-text); border-radius:6px; padding:5px 8px;
+  font-size:.78rem; outline:none; margin-top:4px;
+}
+.pago-ref-input:focus { border-color:var(--pos-accent); }
+.pago-ref-input::placeholder { color:var(--pos-muted); }
+.pago-del {
+  background:rgba(233,69,96,.15); border:1px solid rgba(233,69,96,.25);
+  color:#f87171; border-radius:5px; padding:6px 10px;
+  font-size:.8rem; cursor:pointer; white-space:nowrap; align-self:center;
+}
+.pago-del:hover { background:var(--pos-warn); color:#fff; }
+#btn-agregar-pago {
+  width:100%; padding:7px; border-radius:6px; margin-bottom:10px;
+  background:rgba(255,255,255,.04); border:1px dashed rgba(255,255,255,.15);
+  color:var(--pos-muted); font-size:.82rem; cursor:pointer;
+}
+#btn-agregar-pago:hover { border-color:var(--pos-accent); color:var(--pos-accent); }
+#btn-agregar-pago:disabled { opacity:.3; cursor:not-allowed; }
+.cobro-balance {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:8px 10px; border-radius:6px; margin-bottom:8px;
+  font-size:.85rem; font-weight:700;
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07);
+}
+.fn-btns-cobro {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-bottom:8px;
+}
+
+/* ── Modal OK ── */
+#modal-ok       { z-index:1002; }
+#modal-ok-inner { max-width:320px; text-align:center; }
+#modal-numero   { font-size:1.8rem; font-weight:700; color:var(--pos-accent); }
+#modal-vuelto   { font-size:1.2rem; font-weight:700; color:#4ade80; margin-top:6px; }
+
+/* ── Modal ítem libre ── */
+#modal-libre       { z-index:998; }
+#modal-libre-inner { max-width:340px; }
+
+/* ── Modal caja ── */
+#modal-caja       { z-index:997; }
+#modal-caja-inner { max-width:340px; }
+
+/* ── Modal movimientos ── */
+#modal-movimientos       { z-index:1001; }
+#modal-movimientos-inner { max-width:520px; }
 .mov-item {
   background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07);
-  border-radius:8px; padding:10px 12px; cursor:pointer; transition:background .12s;
+  border-radius:8px; padding:10px 12px; cursor:pointer; transition:background .12s; margin-bottom:6px;
 }
 .mov-item:hover { background:rgba(255,255,255,.08); }
 .mov-item-header { display:flex; justify-content:space-between; align-items:center; }
@@ -225,26 +245,36 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
   border-top:1px solid rgba(255,255,255,.06); font-size:.78rem; color:var(--pos-muted);
 }
 .mov-item-detail.visible { display:block; }
-.mov-badge-ef { background:rgba(46,196,182,.2); color:var(--pos-accent); padding:2px 7px; border-radius:4px; font-size:.68rem; font-weight:700; }
-.mov-badge-mp { background:rgba(83,74,183,.3); color:#a89fec; padding:2px 7px; border-radius:4px; font-size:.68rem; font-weight:700; }
-.mov-badge-mix{ background:rgba(200,169,126,.2); color:#C8A97E; padding:2px 7px; border-radius:4px; font-size:.68rem; font-weight:700; }
-.mov-badge-egr{ background:rgba(233,69,96,.2); color:#f87171; padding:2px 7px; border-radius:4px; font-size:.68rem; font-weight:700; }
-.mov-badge-ing{ background:rgba(74,222,128,.2); color:#4ade80; padding:2px 7px; border-radius:4px; font-size:.68rem; font-weight:700; }
- 
-/* Corte */
+.mov-badge {
+  padding:2px 7px; border-radius:4px; font-size:.68rem; font-weight:700;
+}
+.mov-badge-ef  { background:rgba(46,196,182,.2);  color:var(--pos-accent); }
+.mov-badge-tar { background:rgba(168,159,236,.2);  color:#a89fec; }
+.mov-badge-dig { background:rgba(83,74,183,.3);    color:#a89fec; }
+.mov-badge-mix { background:rgba(200,169,126,.2);  color:#C8A97E; }
+.mov-badge-egr { background:rgba(233,69,96,.2);    color:#f87171; }
+.mov-badge-ing { background:rgba(74,222,128,.2);   color:#4ade80; }
+
+/* ── Modal corte ── */
+#modal-corte       { z-index:1001; }
+#modal-corte-inner { max-width:400px; }
 .corte-row {
   display:flex; justify-content:space-between; align-items:center;
   padding:8px 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:.85rem;
 }
 .corte-row:last-child { border:none; }
-.corte-total { font-size:1rem; font-weight:700; }
 
+/* ── Error genérico ── */
+.pos-error {
+  display:none; background:rgba(233,69,96,.12); border:1px solid rgba(233,69,96,.25);
+  border-radius:6px; padding:8px 12px; font-size:.8rem; color:#f87171; margin-bottom:8px;
+}
 {% endblock %}
 
 {% block content %}
 <div id="pos-wrapper">
 
-  <!-- Header -->
+  <!-- ── Header ── -->
   <header id="pos-header">
     <h1>🍦 POS</h1>
 
@@ -264,13 +294,14 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
       <span class="kbd">F3 Buscar</span>
       <span class="kbd">F4 Limpiar</span>
       <span class="kbd">F9 Ítem libre</span>
-      <a href="{% url 'pedidos:gestion' %}" class="btn btn-sm btn-outline-secondary ms-2" style="font-size:.75rem">
-        ← Panel
-      </a>
+      <span class="kbd">F10 Movimientos</span>
+      <span class="kbd">F11 Corte</span>
+      <a href="{% url 'pedidos:gestion' %}" class="btn btn-sm btn-outline-secondary ms-2"
+         style="font-size:.75rem">← Panel</a>
     </div>
   </header>
 
-  <!-- Grid productos -->
+  <!-- ── Grid de productos ── -->
   <main id="pos-productos">
     {% for p in productos %}
     <div class="prod-card {% if not p.disponible %}agotado{% endif %}"
@@ -280,36 +311,46 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
          data-tipo-display="{{ p.get_tipo_display }}"
          data-precio="{{ p.precio }}"
          data-disponible="{{ p.disponible|yesno:'1,0' }}"
-         data-emoji="{% if p.tipo == 'postre' %}🍮{% elif p.tipo == 'helado_cuarto' %}🍦{% elif p.tipo == 'helado_medio' %}🍧{% elif p.tipo == 'helado_kilo' %}{% else %}📦{% endif %}"
+         data-emoji="{% if p.tipo == 'postre' %}🍮{% elif p.tipo == 'helado_cuarto' %}🍦{% elif p.tipo == 'helado_medio' %}🍧{% elif p.tipo == 'helado_kilo' %}🍨{% else %}📦{% endif %}"
          onclick="agregarProducto(this)">
       {% if not p.disponible %}<span class="agotado-tag">AGOTADO</span>{% endif %}
-      <span class="prod-emoji">{% if p.tipo == 'postre' %}🍮{% elif p.tipo == 'helado_cuarto' %}🍦{% elif p.tipo == 'helado_medio' %}🍧{% elif p.tipo == 'helado_kilo' %}🍨{% else %}📦{% endif %}</span>
+      <span class="prod-emoji">
+        {% if p.tipo == 'postre' %}🍮
+        {% elif p.tipo == 'helado_cuarto' %}🍦
+        {% elif p.tipo == 'helado_medio' %}🍧
+        {% elif p.tipo == 'helado_kilo' %}🍨
+        {% else %}📦{% endif %}
+      </span>
       <div class="prod-nombre">{{ p.nombre }}</div>
       <div class="prod-tipo">{{ p.get_tipo_display }}</div>
       <div class="prod-precio">${{ p.precio|floatformat:0 }}</div>
-      {% if forloop.counter <= 12 %}<div class="prod-shortcut">F{{ forloop.counter }}</div>{% endif %}
     </div>
     {% endfor %}
   </main>
 
-  <!-- Ticket -->
+  <!-- ── Ticket lateral ── -->
   <aside id="pos-ticket">
     <div id="ticket-header">
-      <h2>Ticket <span id="ticket-cant" style="font-size:.75rem;font-weight:400;color:var(--pos-muted)"></span></h2>
+      <h2>Ticket
+        <span id="ticket-cant" style="font-size:.75rem;font-weight:400;color:var(--pos-muted)"></span>
+      </h2>
     </div>
     <div id="ticket-lista">
       <div id="ticket-vacio">Seleccioná productos para comenzar</div>
     </div>
 
     <div id="pos-cobro">
-      <!-- Info caja -->
+      <!-- Estado caja -->
       <div id="caja-info">
         {% if caja %}
           <span>💵 Caja abierta</span>
-          <span style="color:var(--pos-accent);font-weight:700">${{ caja.monto_cierre_esperado|floatformat:0 }}</span>
+          <span style="color:var(--pos-accent);font-weight:700">
+            ${{ caja.monto_cierre_esperado|floatformat:0 }}
+          </span>
         {% else %}
-          <span>Sin caja abierta</span>
-          <button class="fn-btn" style="font-size:.7rem;padding:2px 8px" onclick="abrirModalCaja()">Abrir caja</button>
+          <span style="color:#f87171">Sin caja abierta</span>
+          <button class="fn-btn" style="font-size:.7rem;padding:2px 8px"
+                  onclick="abrirModalCaja()">Abrir caja</button>
         {% endif %}
       </div>
 
@@ -319,42 +360,14 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
         <span id="cobro-total">$0</span>
       </div>
 
-      <!-- Método de pago -->
-      <div class="metodo-btns">
-        <button class="metodo-btn activo" data-metodo="EFECTIVO" onclick="setMetodo(this)">💵 Efectivo</button>
-        <button class="metodo-btn" data-metodo="MERCADOPAGO" onclick="setMetodo(this)">📱 MP</button>
-        <button class="metodo-btn" data-metodo="MIXTO" onclick="setMetodo(this)">🔀 Mixto</button>
-      </div>
-
-      <!-- Monto pagado -->
-      <div id="fila-efectivo">
-        <input type="number" id="cobro-input" class="pos-input" placeholder="Monto recibido ($)" min="0" step="100" oninput="calcularVuelto()">
-      </div>
-      <div id="fila-mp" style="display:none">
-        <input type="number" id="cobro-mp" class="pos-input" placeholder="Monto MercadoPago ($)" min="0">
-      </div>
-      <div id="cobro-vuelto"></div>
-
-      <!-- Nombre cliente -->
-      <input type="text" id="cobro-nombre" class="pos-input" placeholder="Nombre cliente (opcional)">
-
-      <!-- Botones rápidos F1–F12 de monto -->
-      <div class="fn-btns" id="fn-montos">
-        <button class="fn-btn" onclick="setMonto(500)">$500</button>
-        <button class="fn-btn" onclick="setMonto(1000)">$1000</button>
-        <button class="fn-btn" onclick="setMonto(2000)">$2000</button>
-        <button class="fn-btn" onclick="setMonto(5000)">$5000</button>
-        <button class="fn-btn" onclick="setMonto(10000)">$10000</button>
-        <button class="fn-btn" onclick="setMontoExacto()">Exacto</button>
-      </div>
-
       <!-- Acciones -->
       <button class="pos-btn" id="btn-cobrar" disabled onclick="abrirModalCobro()">
         <i class="bi bi-check-circle"></i> Cobrar (F1)
       </button>
       <div style="display:flex;gap:5px">
-        <button class="pos-btn" id="btn-item-libre" onclick="abrirItemLibre()"
-                style="flex:1;background:rgba(200,169,126,.15);color:#C8A97E;border:1px solid rgba(200,169,126,.3);font-size:.78rem;padding:7px">
+        <button class="pos-btn" onclick="abrirItemLibre()"
+                style="flex:1;background:rgba(200,169,126,.15);color:#C8A97E;
+                       border:1px solid rgba(200,169,126,.3);font-size:.78rem;padding:7px">
           <i class="bi bi-plus-circle"></i> Ítem libre (F9)
         </button>
         <button class="pos-btn" id="btn-cancelar" onclick="limpiarTicket()"
@@ -362,13 +375,27 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
           <i class="bi bi-x-circle"></i> Cancelar (ESC)
         </button>
       </div>
+      <div style="display:flex;gap:5px;margin-top:5px">
+        <button class="pos-btn" onclick="abrirMovimientos()"
+                style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+                       font-size:.75rem;padding:7px;color:var(--pos-muted)">
+          <i class="bi bi-list-ul"></i> Movimientos (F10)
+        </button>
+        <button class="pos-btn" onclick="abrirCorte()"
+                style="flex:1;background:rgba(186,117,23,.15);border:1px solid rgba(186,117,23,.3);
+                       font-size:.75rem;padding:7px;color:#BA7517">
+          <i class="bi bi-lock"></i> Corte (F11)
+        </button>
+      </div>
     </div>
   </aside>
 </div>
 
-<!-- Modal confirmación -->
-<div id="modal-ok">
-  <div id="modal-inner">
+<!-- ════════════════════════════════════════════
+     MODAL: Venta confirmada
+════════════════════════════════════════════ -->
+<div id="modal-ok" class="pos-modal" style="z-index:1002">
+  <div class="pos-modal-inner" id="modal-ok-inner">
     <div style="font-size:2.5rem">✅</div>
     <p style="margin:.4rem 0 0;color:var(--pos-muted);font-size:.8rem">Venta registrada</p>
     <div id="modal-numero"></div>
@@ -380,193 +407,193 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
   </div>
 </div>
 
-<!-- Modal ítem libre -->
-<div id="modal-libre">
-  <div id="modal-libre-inner">
-    <h3>➕ Ítem libre</h3>
-    <input type="text" id="libre-desc" class="pos-input" placeholder="Descripción (ej: Térmico suelto)">
-    <input type="number" id="libre-precio" class="pos-input" placeholder="Importe ($)" min="0" step="100">
-    <div style="display:flex;gap:8px;margin-top:4px">
+<!-- ════════════════════════════════════════════
+     MODAL: Ítem libre
+════════════════════════════════════════════ -->
+<div id="modal-libre" class="pos-modal" style="z-index:998">
+  <div class="pos-modal-inner" id="modal-libre-inner">
+    <div class="modal-header">
+      <h3>➕ Ítem libre</h3>
+      <button class="modal-close" onclick="cerrarModalLibre()">✕</button>
+    </div>
+    <input type="text" id="libre-desc" class="pos-input"
+           placeholder="Descripción (ej: Térmico suelto, Promo, etc.)">
+    <input type="number" id="libre-precio" class="pos-input"
+           placeholder="Importe ($)" min="0" step="100">
+    <div style="display:flex;gap:8px">
       <button class="pos-btn" onclick="agregarItemLibre()"
               style="flex:1;background:var(--pos-accent)">Agregar</button>
       <button class="pos-btn" onclick="cerrarModalLibre()"
-              style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)">Cancelar</button>
+              style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)">
+        Cancelar
+      </button>
     </div>
   </div>
 </div>
 
-<!-- Modal abrir caja -->
-<div id="modal-caja">
-  <div id="modal-caja-inner">
-    <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px">💵 Abrir caja</h3>
-    <input type="number" id="caja-monto-inicial" class="pos-input" placeholder="Monto inicial ($)" min="0" step="100">
-    <div style="display:flex;gap:8px;margin-top:4px">
+<!-- ════════════════════════════════════════════
+     MODAL: Abrir caja
+════════════════════════════════════════════ -->
+<div id="modal-caja" class="pos-modal" style="z-index:997">
+  <div class="pos-modal-inner" id="modal-caja-inner">
+    <div class="modal-header">
+      <h3>💵 Abrir caja</h3>
+      <button class="modal-close"
+              onclick="document.getElementById('modal-caja').classList.remove('visible')">✕</button>
+    </div>
+    <input type="number" id="caja-monto-inicial" class="pos-input"
+           placeholder="Monto inicial ($)" min="0" step="100">
+    <div style="display:flex;gap:8px">
       <button class="pos-btn" onclick="abrirCaja()"
               style="flex:1;background:var(--pos-accent)">Abrir</button>
-      <button class="pos-btn" onclick="document.getElementById('modal-caja').classList.remove('visible')"
-              style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)">Cancelar</button>
+      <button class="pos-btn"
+              onclick="document.getElementById('modal-caja').classList.remove('visible')"
+              style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)">
+        Cancelar
+      </button>
     </div>
   </div>
 </div>
 
-<!-- Modal de COBRO -->
-<div id="modal-cobro">
-  <div id="modal-cobro-inner">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <h3 style="margin:0;font-size:1rem;font-weight:700">Confirmar cobro</h3>
-      <button onclick="cerrarModalCobro()" style="background:none;border:none;color:var(--pos-muted);font-size:1.2rem;cursor:pointer">✕</button>
+<!-- ════════════════════════════════════════════
+     MODAL: Cobro multi-forma
+════════════════════════════════════════════ -->
+<div id="modal-cobro" class="pos-modal" style="z-index:1000">
+  <div class="pos-modal-inner" id="modal-cobro-inner">
+    <div class="modal-header">
+      <h3>Confirmar cobro</h3>
+      <button class="modal-close" onclick="cerrarModalCobro()">✕</button>
     </div>
- 
-    <!-- Total grande -->
+
+    <!-- Total -->
     <div style="text-align:center;margin-bottom:16px">
-      <div style="font-size:.75rem;color:var(--pos-muted);text-transform:uppercase;letter-spacing:1px">Total</div>
-      <div id="cobro-modal-total" style="font-size:2.4rem;font-weight:700;color:var(--pos-accent)">$0</div>
-    </div>
- 
-    <!-- Método de pago -->
-    <div style="margin-bottom:12px">
-      <div style="font-size:.75rem;color:var(--pos-muted);margin-bottom:6px">Método de pago</div>
-      <div class="metodo-btns">
-        <button class="metodo-btn activo" data-metodo="EFECTIVO" onclick="setMetodoModal(this)">💵 Efectivo</button>
-        <button class="metodo-btn" data-metodo="MERCADOPAGO" onclick="setMetodoModal(this)">📱 MercadoPago</button>
-        <button class="metodo-btn" data-metodo="MIXTO" onclick="setMetodoModal(this)">🔀 Mixto</button>
+      <div style="font-size:.7rem;color:var(--pos-muted);text-transform:uppercase;letter-spacing:1px">
+        Total del ticket
       </div>
+      <div id="cobro-modal-total"
+           style="font-size:2.2rem;font-weight:700;color:var(--pos-accent)">$0</div>
     </div>
- 
-    <!-- Efectivo -->
-    <div id="cobro-sec-efectivo">
-      <div style="font-size:.75rem;color:var(--pos-muted);margin-bottom:4px">Monto recibido</div>
-      <input type="number" id="cobro-m-efectivo" class="pos-input"
-             placeholder="$0" min="0" step="100" oninput="actualizarCobro()">
-      <!-- Botones rápidos -->
-      <div class="fn-btns" style="margin-top:6px">
-        <button class="fn-btn" onclick="setMontoModal(1000)">$1.000</button>
-        <button class="fn-btn" onclick="setMontoModal(2000)">$2.000</button>
-        <button class="fn-btn" onclick="setMontoModal(5000)">$5.000</button>
-        <button class="fn-btn" onclick="setMontoModal(10000)">$10.000</button>
-        <button class="fn-btn" onclick="setMontoModal(20000)">$20.000</button>
-        <button class="fn-btn" onclick="setMontoExactoModal()">Exacto</button>
-      </div>
-      <div id="cobro-vuelto-modal" style="text-align:center;font-size:1rem;font-weight:700;min-height:24px;margin-top:8px"></div>
-    </div>
- 
-    <!-- MercadoPago -->
-    <div id="cobro-sec-mp" style="display:none">
-      <div style="font-size:.75rem;color:var(--pos-muted);margin-bottom:4px">Monto MercadoPago</div>
-      <input type="number" id="cobro-m-mp" class="pos-input"
-             placeholder="Ingresá el monto cobrado por MP" min="0" oninput="actualizarCobro()">
-      <div style="font-size:.72rem;color:var(--pos-muted);margin-top:4px">
-        Confirmá que el pago fue acreditado antes de cerrar la venta.
-      </div>
-    </div>
- 
-    <!-- MIXTO -->
-    <div id="cobro-sec-mixto" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div>
-          <div style="font-size:.72rem;color:var(--pos-muted);margin-bottom:3px">Efectivo</div>
-          <input type="number" id="cobro-mix-ef" class="pos-input" placeholder="$0" min="0" oninput="actualizarCobro()">
-        </div>
-        <div>
-          <div style="font-size:.72rem;color:var(--pos-muted);margin-bottom:3px">MercadoPago</div>
-          <input type="number" id="cobro-mix-mp" class="pos-input" placeholder="$0" min="0" oninput="actualizarCobro()">
-        </div>
-      </div>
-      <div id="cobro-mixto-estado" style="text-align:center;font-size:.85rem;font-weight:700;min-height:22px;margin-top:8px"></div>
-    </div>
- 
-    <!-- Error -->
-    <div id="cobro-error" style="display:none;background:rgba(233,69,96,.15);border:1px solid rgba(233,69,96,.3);
-         border-radius:6px;padding:8px 12px;font-size:.82rem;color:#f87171;margin-top:10px"></div>
- 
+
     <!-- Nombre cliente -->
-    <div style="margin-top:12px">
-      <div style="font-size:.75rem;color:var(--pos-muted);margin-bottom:4px">Nombre cliente (opcional)</div>
-      <input type="text" id="cobro-nombre-modal" class="pos-input" placeholder="Mostrador">
+    <div style="margin-bottom:12px">
+      <div style="font-size:.72rem;color:var(--pos-muted);margin-bottom:4px">Nombre cliente (opcional)</div>
+      <input type="text" id="cobro-nombre-modal" class="pos-input" style="margin:0" placeholder="Mostrador">
     </div>
- 
-    <!-- Botón confirmar -->
+
+    <!-- Filas de pago -->
+    <div style="font-size:.72rem;color:var(--pos-muted);margin-bottom:6px;
+                text-transform:uppercase;letter-spacing:1px">
+      Formas de pago
+      <span style="font-weight:400;text-transform:none;letter-spacing:0">(máx. 2)</span>
+    </div>
+    <div id="cobro-pagos-lista"></div>
+    <button id="btn-agregar-pago" onclick="agregarFilaPago()">+ Agregar forma de pago</button>
+
+    <!-- Balance / vuelto -->
+    <div class="cobro-balance" id="cobro-balance" style="display:none">
+      <span id="cobro-balance-label"></span>
+      <span id="cobro-balance-valor" style="font-size:1rem"></span>
+    </div>
+
+    <!-- Error -->
+    <div id="cobro-error-modal" class="pos-error"></div>
+
     <button id="btn-confirmar-cobro" class="pos-btn" onclick="confirmarCobro()"
-            style="background:var(--pos-accent);margin-top:14px">
-      <i class="bi bi-check-circle"></i> Confirmar cobro (F1 / Enter)
+            style="background:var(--pos-accent)">
+      <i class="bi bi-check-circle"></i> Confirmar (Enter)
     </button>
   </div>
 </div>
 
-<!-- Modal movimientos del día -->
-<div id="modal-movimientos">
-  <div id="modal-mov-inner">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <h3 style="margin:0;font-size:1rem;font-weight:700">📋 Movimientos del día</h3>
-      <button onclick="document.getElementById('modal-movimientos').classList.remove('visible')"
-              style="background:none;border:none;color:var(--pos-muted);font-size:1.2rem;cursor:pointer">✕</button>
+<!-- ════════════════════════════════════════════
+     MODAL: Movimientos del día
+════════════════════════════════════════════ -->
+<div id="modal-movimientos" class="pos-modal" style="z-index:1001">
+  <div class="pos-modal-inner" id="modal-movimientos-inner">
+    <div class="modal-header">
+      <h3>📋 Movimientos del día</h3>
+      <button class="modal-close"
+              onclick="document.getElementById('modal-movimientos').classList.remove('visible')">✕</button>
     </div>
- 
+
     <!-- Filtro fecha -->
     <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-      <input type="date" id="mov-fecha" class="pos-input" style="margin:0;flex:1;font-size:.8rem;padding:5px 8px">
-      <button class="fn-btn" onclick="cargarMovimientos()" style="padding:5px 10px;white-space:nowrap">Filtrar</button>
+      <input type="date" id="mov-fecha" class="pos-input"
+             style="margin:0;flex:1;font-size:.8rem;padding:5px 8px">
+      <button class="fn-btn" onclick="cargarMovimientos()"
+              style="padding:5px 10px;white-space:nowrap">Filtrar</button>
     </div>
- 
-    <!-- Resumen rápido -->
+
+    <!-- Resumen -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px">
-      <div style="background:rgba(46,196,182,.1);border:1px solid rgba(46,196,182,.2);border-radius:6px;padding:8px;text-align:center">
+      <div style="background:rgba(46,196,182,.1);border:1px solid rgba(46,196,182,.2);
+                  border-radius:6px;padding:8px;text-align:center">
         <div style="font-size:.65rem;color:var(--pos-muted)">VENTAS</div>
-        <div id="mov-resumen-ventas" style="font-size:1rem;font-weight:700;color:var(--pos-accent)">$0</div>
+        <div id="mov-resumen-ventas"
+             style="font-size:1rem;font-weight:700;color:var(--pos-accent)">$0</div>
       </div>
-      <div style="background:rgba(233,69,96,.1);border:1px solid rgba(233,69,96,.2);border-radius:6px;padding:8px;text-align:center">
+      <div style="background:rgba(233,69,96,.1);border:1px solid rgba(233,69,96,.2);
+                  border-radius:6px;padding:8px;text-align:center">
         <div style="font-size:.65rem;color:var(--pos-muted)">EGRESOS</div>
         <div id="mov-resumen-egresos" style="font-size:1rem;font-weight:700;color:#f87171">$0</div>
       </div>
-      <div style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);border-radius:6px;padding:8px;text-align:center">
+      <div style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);
+                  border-radius:6px;padding:8px;text-align:center">
         <div style="font-size:.65rem;color:var(--pos-muted)">BALANCE</div>
         <div id="mov-resumen-balance" style="font-size:1rem;font-weight:700;color:#4ade80">$0</div>
       </div>
     </div>
- 
-    <!-- Lista tickets -->
-    <div id="mov-lista" style="overflow-y:auto;max-height:320px;display:flex;flex-direction:column;gap:6px">
-      <div style="text-align:center;color:var(--pos-muted);padding:20px;font-size:.82rem">Cargando…</div>
-    </div>
- 
-    <!-- Movimientos manuales -->
-    <div style="border-top:1px solid rgba(255,255,255,.07);margin-top:12px;padding-top:12px">
-      <div style="font-size:.75rem;color:var(--pos-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">
-        Movimiento manual
+
+    <!-- Lista -->
+    <div id="mov-lista"
+         style="overflow-y:auto;max-height:280px;display:flex;flex-direction:column;gap:0">
+      <div style="text-align:center;color:var(--pos-muted);padding:20px;font-size:.82rem">
+        Cargando…
       </div>
+    </div>
+
+    <!-- Movimiento manual -->
+    <div style="border-top:1px solid rgba(255,255,255,.07);margin-top:12px;padding-top:12px">
+      <div style="font-size:.72rem;color:var(--pos-muted);margin-bottom:8px;
+                  text-transform:uppercase;letter-spacing:1px">Movimiento manual</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
         <select id="mov-tipo" class="pos-input" style="margin:0;font-size:.8rem;padding:6px 8px">
           <option value="INGRESO">💚 Ingreso</option>
           <option value="EGRESO">🔴 Egreso</option>
         </select>
-        <input type="number" id="mov-monto" class="pos-input" style="margin:0" placeholder="Monto $" min="1">
+        <input type="number" id="mov-monto" class="pos-input"
+               style="margin:0" placeholder="Monto $" min="1">
       </div>
-      <input type="text" id="mov-motivo" class="pos-input" placeholder="Motivo (obligatorio)" style="margin-bottom:6px">
+      <input type="text" id="mov-motivo" class="pos-input"
+             placeholder="Motivo (obligatorio)" style="margin-bottom:6px">
       <button class="pos-btn" onclick="registrarMovimientoManual()"
-              style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-size:.82rem;padding:8px">
+              style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+                     font-size:.82rem;padding:8px">
         Registrar movimiento
       </button>
     </div>
   </div>
 </div>
- 
-<!-- Modal CORTE DEL DÍA -->
-<div id="modal-corte">
-  <div id="modal-corte-inner">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <h3 style="margin:0;font-size:1rem;font-weight:700">🔒 Corte del día</h3>
-      <button onclick="document.getElementById('modal-corte').classList.remove('visible')"
-              style="background:none;border:none;color:var(--pos-muted);font-size:1.2rem;cursor:pointer">✕</button>
+
+<!-- ════════════════════════════════════════════
+     MODAL: Corte del día
+════════════════════════════════════════════ -->
+<div id="modal-corte" class="pos-modal" style="z-index:1001">
+  <div class="pos-modal-inner" id="modal-corte-inner">
+    <div class="modal-header">
+      <h3>🔒 Corte del día</h3>
+      <button class="modal-close"
+              onclick="document.getElementById('modal-corte').classList.remove('visible')">✕</button>
     </div>
- 
     <div id="corte-detalle" style="margin-bottom:16px"></div>
- 
-    <div style="margin-bottom:12px">
-      <div style="font-size:.75rem;color:var(--pos-muted);margin-bottom:4px">Efectivo real contado ($)</div>
-      <input type="number" id="corte-real" class="pos-input" placeholder="0" min="0" oninput="actualizarDiff()">
-      <div id="corte-diff" style="text-align:center;font-size:.9rem;font-weight:700;min-height:20px;margin-top:6px"></div>
+    <div style="font-size:.75rem;color:var(--pos-muted);margin-bottom:4px">
+      Efectivo real contado ($)
     </div>
- 
+    <input type="number" id="corte-real" class="pos-input"
+           placeholder="0" min="0" oninput="actualizarDiff()">
+    <div id="corte-diff"
+         style="text-align:center;font-size:.9rem;font-weight:700;min-height:20px;
+                margin-top:6px;margin-bottom:12px"></div>
     <button class="pos-btn" onclick="cerrarCaja()"
             style="background:#BA7517;color:#fff">
       Confirmar cierre de caja
@@ -578,18 +605,23 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
 
 {% block extra_js %}
 <script>
-const CSRF       = "{{ csrf_token }}";
-const URL_COBRAR = "{% url 'pedidos:pos_cobrar' %}";
-const URL_CAJA   = "{% url 'pagos:abrir_caja' %}";
+const CSRF            = "{{ csrf_token }}";
+const URL_COBRAR      = "{% url 'pedidos:pos_cobrar' %}";
+const URL_CAJA        = "{% url 'pagos:abrir_caja' %}";
+const URL_MOVIMIENTOS = "{% url 'pagos:pos_movimientos' %}";
+const URL_MOV_MANUAL  = "{% url 'pagos:pos_movimiento_manual' %}";
+const URL_CORTE       = "{% url 'pagos:pos_corte' %}";
+const URL_CERRAR_CAJA = "{% url 'pagos:cerrar_caja' %}";
 
 let ticket = [];
-let metodo = "EFECTIVO";
 
+// ════════════════════════════════════════════
+// TICKET
+// ════════════════════════════════════════════
 
-// ── Agregar producto ──────────────────────────────────────────
 function agregarProducto(el) {
   if (el.dataset.disponible === "0") return;
-  const id = el.dataset.id;
+  const id  = el.dataset.id;
   const idx = ticket.findIndex(i => i.producto_id === id && !i.libre);
   if (idx >= 0) {
     ticket[idx].cantidad++;
@@ -607,14 +639,13 @@ function agregarProducto(el) {
   renderTicket();
 }
 
-// ── Ítem libre ───────────────────────────────────────────────
 function abrirItemLibre() {
   document.getElementById("modal-libre").classList.add("visible");
-  document.getElementById("libre-desc").focus();
+  setTimeout(() => document.getElementById("libre-desc").focus(), 60);
 }
 function cerrarModalLibre() {
   document.getElementById("modal-libre").classList.remove("visible");
-  document.getElementById("libre-desc").value = "";
+  document.getElementById("libre-desc").value  = "";
   document.getElementById("libre-precio").value = "";
 }
 function agregarItemLibre() {
@@ -624,19 +655,20 @@ function agregarItemLibre() {
     document.getElementById("libre-desc").focus();
     return;
   }
-  ticket.push({ producto_id: null, nombre: desc, tipo: "Ítem libre", precio, cantidad: 1, emoji: "📌", libre: true });
+  ticket.push({
+    producto_id: null, nombre: desc, tipo: "Ítem libre",
+    precio, cantidad: 1, emoji: "📌", libre: true,
+  });
   cerrarModalLibre();
   renderTicket();
 }
 
-// ── Cambiar cantidad ─────────────────────────────────────────
 function cambiarCantidad(idx, delta) {
   ticket[idx].cantidad += delta;
   if (ticket[idx].cantidad <= 0) ticket.splice(idx, 1);
   renderTicket();
 }
 
-// ── Render ticket ────────────────────────────────────────────
 function renderTicket() {
   const lista = document.getElementById("ticket-lista");
   if (ticket.length === 0) {
@@ -644,7 +676,6 @@ function renderTicket() {
     document.getElementById("cobro-total").textContent = "$0";
     document.getElementById("ticket-cant").textContent = "";
     document.getElementById("btn-cobrar").disabled = true;
-    document.getElementById("cobro-vuelto").textContent = "";
     return;
   }
   let html = "", total = 0;
@@ -652,7 +683,10 @@ function renderTicket() {
     const sub = it.precio * it.cantidad;
     total += sub;
     html += `<div class="ticket-item">
-      <div class="ti-nombre">${it.emoji} ${it.nombre}<span class="ti-tipo">${it.tipo}</span></div>
+      <div class="ti-nombre">
+        ${it.emoji} ${it.nombre}
+        <span class="ti-tipo">${it.tipo}</span>
+      </div>
       <div class="ti-qty">
         <button class="ti-btn" onclick="cambiarCantidad(${idx},-1)">−</button>
         <span class="ti-qty-num">${it.cantidad}</span>
@@ -662,132 +696,267 @@ function renderTicket() {
     </div>`;
   });
   lista.innerHTML = html;
-  document.getElementById("cobro-total").textContent = "$" + total.toLocaleString("es-AR");
-  document.getElementById("ticket-cant").textContent = `(${ticket.length} ítem${ticket.length > 1 ? "s" : ""})`;
+  document.getElementById("cobro-total").textContent =
+    "$" + total.toLocaleString("es-AR");
+  document.getElementById("ticket-cant").textContent =
+    `(${ticket.length} ítem${ticket.length > 1 ? "s" : ""})`;
   document.getElementById("btn-cobrar").disabled = false;
-  calcularVuelto();
-}
-
-// ── Método de pago ───────────────────────────────────────────
-function setMetodo(btn) {
-  metodo = btn.dataset.metodo;
-  document.querySelectorAll(".metodo-btn").forEach(b => b.classList.remove("activo"));
-  btn.classList.add("activo");
-  document.getElementById("fila-efectivo").style.display = metodo !== "MERCADOPAGO" ? "block" : "none";
-  document.getElementById("fila-mp").style.display       = metodo !== "EFECTIVO"    ? "block" : "none";
-  document.getElementById("fn-montos").style.display     = metodo !== "MERCADOPAGO" ? "grid"  : "none";
-  calcularVuelto();
-}
-
-function setMonto(v) {
-  document.getElementById("cobro-input").value = v;
-  calcularVuelto();
-}
-function setMontoExacto() {
-  const t = calcularTotal();
-  document.getElementById("cobro-input").value = t;
-  calcularVuelto();
-}
-
-// ── Vuelto ───────────────────────────────────────────────────
-function calcularVuelto() {
-  if (metodo === "MERCADOPAGO") { document.getElementById("cobro-vuelto").textContent = ""; return; }
-  const total  = calcularTotal();
-  const pagado = parseFloat(document.getElementById("cobro-input").value) || 0;
-  const vuelto = pagado - total;
-  const el     = document.getElementById("cobro-vuelto");
-  if (pagado > 0) {
-    el.textContent = vuelto >= 0
-      ? "Vuelto: $" + vuelto.toLocaleString("es-AR")
-      : "Falta: $"  + Math.abs(vuelto).toLocaleString("es-AR");
-    el.style.color = vuelto >= 0 ? "#4ade80" : "#f87171";
-  } else {
-    el.textContent = "";
-  }
 }
 
 function calcularTotal() {
   return ticket.reduce((acc, it) => acc + it.precio * it.cantidad, 0);
 }
 
-// ── Cobrar ───────────────────────────────────────────────────
-/*
-async function cobrar() {
-  if (ticket.length === 0) return;
+function limpiarTicket() {
+  ticket = [];
+  renderTicket();
+}
+
+// ════════════════════════════════════════════
+// MODAL COBRO — multi-forma de pago
+// ════════════════════════════════════════════
+
+const SUBTIPOS = {
+  EFECTIVO: [],
+  TARJETA:  [["DEBITO","Débito"], ["CREDITO","Crédito"]],
+  DIGITAL:  [["MERCADOPAGO","MercadoPago"], ["TRANSFERENCIA","Transferencia"]],
+};
+
+let pagosModal = [];
+
+function abrirModalCobro() {
+  if (!ticket.length) return;
+  pagosModal = [];
+  document.getElementById("cobro-pagos-lista").innerHTML = "";
+  document.getElementById("cobro-nombre-modal").value = "";
+  document.getElementById("cobro-balance").style.display = "none";
+  ocultarErrorCobro();
+  document.getElementById("cobro-modal-total").textContent =
+    "$" + calcularTotal().toLocaleString("es-AR");
+  agregarFilaPago();
+  document.getElementById("modal-cobro").classList.add("visible");
+  setTimeout(() => {
+    const inp = document.querySelector(".pago-monto-input");
+    if (inp) inp.focus();
+  }, 80);
+}
+
+function cerrarModalCobro() {
+  document.getElementById("modal-cobro").classList.remove("visible");
+}
+
+function agregarFilaPago() {
+  if (pagosModal.length >= 2) return;
+  const idx = pagosModal.length;
+  pagosModal.push({ tipo: "EFECTIVO", subtipo: "", monto: "", referencia: "" });
+  const lista = document.getElementById("cobro-pagos-lista");
+  const div   = document.createElement("div");
+  div.className = "pago-fila";
+  div.id        = `pago-fila-${idx}`;
+  div.innerHTML  = buildFilaHtml(idx);
+  lista.appendChild(div);
+  actualizarBtnAgregar();
+  actualizarBalance();
+}
+
+function buildFilaHtml(idx) {
+  const p    = pagosModal[idx];
+  const subs = SUBTIPOS[p.tipo] || [];
+  const tieneSub = subs.length > 0;
+  const tieneRef = p.tipo !== "EFECTIVO";
+  const mostrarDel = pagosModal.length > 1 || idx > 0;
+
+  const tipoOpts = [
+    ["EFECTIVO","💵 Efectivo"],
+    ["TARJETA", "💳 Tarjeta"],
+    ["DIGITAL", "📱 Digital"],
+  ].map(([v, l]) =>
+    `<option value="${v}" ${p.tipo === v ? "selected" : ""}>${l}</option>`
+  ).join("");
+
+  const subOpts = tieneSub
+    ? subs.map(([v, l]) =>
+        `<option value="${v}" ${p.subtipo === v ? "selected" : ""}>${l}</option>`
+      ).join("")
+    : "";
+
+  const colsClass = tieneSub ? "cols-3" : "cols-2";
+
+  return `
+    <div class="pago-grid ${colsClass}">
+      <select class="pago-sel" onchange="onTipoChange(${idx}, this.value)">
+        ${tipoOpts}
+      </select>
+      ${tieneSub
+        ? `<select class="pago-sel" onchange="pagosModal[${idx}].subtipo=this.value">
+             ${subOpts}
+           </select>`
+        : ""}
+      <input type="number" class="pago-monto-input"
+             placeholder="Monto $" min="1"
+             value="${p.monto}"
+             oninput="pagosModal[${idx}].monto=this.value; actualizarBalance()">
+      ${mostrarDel
+        ? `<button class="pago-del" onclick="eliminarFilaPago(${idx})">✕</button>`
+        : ""}
+    </div>
+    ${tieneRef
+      ? `<input type="text" class="pago-ref-input"
+               placeholder="Referencia / comprobante (opcional)"
+               value="${p.referencia}"
+               oninput="pagosModal[${idx}].referencia=this.value">`
+      : ""}
+  `;
+}
+
+function onTipoChange(idx, tipo) {
+  pagosModal[idx].tipo      = tipo;
+  pagosModal[idx].subtipo   = SUBTIPOS[tipo]?.[0]?.[0] || "";
+  pagosModal[idx].referencia = "";
+  document.getElementById(`pago-fila-${idx}`).innerHTML = buildFilaHtml(idx);
+  actualizarBalance();
+}
+
+function eliminarFilaPago(idx) {
+  pagosModal.splice(idx, 1);
+  const lista = document.getElementById("cobro-pagos-lista");
+  lista.innerHTML = "";
+  pagosModal.forEach((_, i) => {
+    const div = document.createElement("div");
+    div.className = "pago-fila";
+    div.id        = `pago-fila-${i}`;
+    div.innerHTML  = buildFilaHtml(i);
+    lista.appendChild(div);
+  });
+  actualizarBtnAgregar();
+  actualizarBalance();
+}
+
+function actualizarBtnAgregar() {
+  document.getElementById("btn-agregar-pago").disabled = pagosModal.length >= 2;
+}
+
+function actualizarBalance() {
   const total  = calcularTotal();
-  const pagado = parseFloat(document.getElementById("cobro-input").value) || 0;
-  const mp     = parseFloat(document.getElementById("cobro-mp").value)    || 0;
-  const nombre = document.getElementById("cobro-nombre").value.trim() || "Mostrador";
+  const sumado = pagosModal.reduce((acc, p) => acc + (parseFloat(p.monto) || 0), 0);
+  const diff   = sumado - total;
+  const balEl  = document.getElementById("cobro-balance");
+  const labEl  = document.getElementById("cobro-balance-label");
+  const valEl  = document.getElementById("cobro-balance-valor");
 
-  if (metodo === "EFECTIVO" && pagado < total) {
-    document.getElementById("cobro-input").focus();
-    document.getElementById("cobro-vuelto").textContent = "⚠ Ingresá el monto recibido";
-    document.getElementById("cobro-vuelto").style.color = "#f87171";
-    return;
+  if (sumado <= 0) { balEl.style.display = "none"; return; }
+
+  balEl.style.display = "flex";
+  if (diff < 0) {
+    labEl.textContent = "Falta";
+    valEl.textContent = `-$${Math.abs(diff).toLocaleString("es-AR")}`;
+    valEl.style.color = "#f87171";
+  } else if (diff === 0) {
+    labEl.textContent = "Monto exacto";
+    valEl.textContent = "✔";
+    valEl.style.color = "#4ade80";
+  } else {
+    const tieneEf = pagosModal.some(p => p.tipo === "EFECTIVO" && parseFloat(p.monto) > 0);
+    labEl.textContent = tieneEf ? "Vuelto" : "Excede";
+    valEl.textContent = `$${diff.toLocaleString("es-AR")}`;
+    valEl.style.color = "#4ade80";
   }
+}
 
-  const btn = document.getElementById("btn-cobrar");
-  btn.disabled = true;
+function ocultarErrorCobro() {
+  const el = document.getElementById("cobro-error-modal");
+  el.style.display = "none"; el.textContent = "";
+}
+function mostrarErrorCobro(msg) {
+  const el = document.getElementById("cobro-error-modal");
+  el.textContent = msg; el.style.display = "block";
+}
+
+function validarPagosModal() {
+  ocultarErrorCobro();
+  const total = calcularTotal();
+  if (!pagosModal.length)
+    return mostrarErrorCobro("Agregá al menos una forma de pago."), false;
+
+  let suma = 0;
+  for (let i = 0; i < pagosModal.length; i++) {
+    const p   = pagosModal[i];
+    const num = parseFloat(p.monto);
+    if (!p.tipo)
+      return mostrarErrorCobro(`Pago ${i+1}: seleccioná el tipo.`), false;
+    if (isNaN(num) || num <= 0)
+      return mostrarErrorCobro(`Pago ${i+1}: ingresá un monto válido.`), false;
+    if (SUBTIPOS[p.tipo]?.length && !p.subtipo)
+      return mostrarErrorCobro(`Pago ${i+1}: seleccioná el subtipo.`), false;
+    suma += num;
+  }
+  if (suma < total)
+    return mostrarErrorCobro(
+      `Los pagos suman $${suma.toLocaleString("es-AR")} pero el total es $${total.toLocaleString("es-AR")}. Falta $${(total - suma).toLocaleString("es-AR")}.`
+    ), false;
+  return true;
+}
+
+async function confirmarCobro() {
+  if (!validarPagosModal()) return;
+  const nombre = document.getElementById("cobro-nombre-modal").value.trim() || "Mostrador";
+  const btn    = document.getElementById("btn-confirmar-cobro");
+  btn.disabled  = true;
   btn.innerHTML = "⏳ Procesando…";
+  ocultarErrorCobro();
 
   try {
     const resp = await fetch(URL_COBRAR, {
-      method: "POST",
+      method:  "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
       body: JSON.stringify({
-        items:        ticket.map(it => ({
-          producto_id: it.producto_id,
-          cantidad:    it.cantidad,
-          libre:       it.libre || false,
-          libre_desc:  it.nombre,
-          libre_precio:it.precio,
+        items: ticket.map(it => ({
+          producto_id:  it.producto_id,
+          cantidad:     it.cantidad,
+          libre:        it.libre || false,
+          libre_desc:   it.nombre,
+          libre_precio: it.precio,
         })),
-        metodo_pago:  metodo,
-        monto_pagado: pagado,
-        monto_mp:     mp,
+        pagos: pagosModal.map(p => ({
+          tipo:       p.tipo,
+          subtipo:    p.subtipo || "",
+          monto:      parseFloat(p.monto),
+          referencia: p.referencia || "",
+        })),
         nombre,
       }),
     });
     const data = await resp.json();
     if (data.ok) {
+      cerrarModalCobro();
       document.getElementById("modal-numero").textContent = data.numero;
       document.getElementById("modal-vuelto").textContent =
-        metodo === "EFECTIVO" && data.vuelto > 0
-          ? "Vuelto: $" + data.vuelto.toLocaleString("es-AR")
-          : "";
+        data.vuelto > 0 ? `Vuelto: $${data.vuelto.toLocaleString("es-AR")}` : "";
       document.getElementById("modal-ok").classList.add("visible");
     } else {
-      alert("Error: " + data.error);
+      mostrarErrorCobro(data.error || "Error al procesar el cobro.");
     }
-  } catch(e) {
-    alert("Error de conexión: " + e);
+  } catch {
+    mostrarErrorCobro("Error de conexión. Intentá de nuevo.");
   } finally {
-    // SIEMPRE restaurar el botón, tanto en éxito como en error
-    btn.disabled = ticket.length === 0;
-    btn.innerHTML = '<i class="bi bi-check-circle"></i> Cobrar (F1)';
+    btn.disabled  = false;
+    btn.innerHTML = '<i class="bi bi-check-circle"></i> Confirmar (Enter)';
   }
-} 
-*/
+}
+
 function cerrarModalOk() {
   document.getElementById("modal-ok").classList.remove("visible");
   limpiarTicket();
   document.getElementById("pos-search").focus();
 }
 
-// ── Limpiar ──────────────────────────────────────────────────
-function limpiarTicket() {
-  ticket = [];
-  renderTicket();
-  document.getElementById("cobro-input").value  = "";
-  document.getElementById("cobro-mp").value     = "";
-  document.getElementById("cobro-nombre").value = "";
-  document.getElementById("cobro-vuelto").textContent = "";
-}
+// ════════════════════════════════════════════
+// CAJA
+// ════════════════════════════════════════════
 
-// ── Abrir caja desde POS ─────────────────────────────────────
 function abrirModalCaja() {
   document.getElementById("modal-caja").classList.add("visible");
-  document.getElementById("caja-monto-inicial").focus();
+  setTimeout(() => document.getElementById("caja-monto-inicial").focus(), 60);
 }
 async function abrirCaja() {
   const monto = document.getElementById("caja-monto-inicial").value || "0";
@@ -798,7 +967,200 @@ async function abrirCaja() {
   window.location.reload();
 }
 
-// ── Filtros por tipo ─────────────────────────────────────────
+// ════════════════════════════════════════════
+// MOVIMIENTOS DEL DÍA
+// ════════════════════════════════════════════
+
+function abrirMovimientos() {
+  document.getElementById("mov-fecha").value = new Date().toISOString().split("T")[0];
+  document.getElementById("modal-movimientos").classList.add("visible");
+  cargarMovimientos();
+}
+
+async function cargarMovimientos() {
+  const fecha = document.getElementById("mov-fecha").value;
+  const lista = document.getElementById("mov-lista");
+  lista.innerHTML =
+    '<div style="text-align:center;color:var(--pos-muted);padding:20px;font-size:.82rem">Cargando…</div>';
+  try {
+    const resp = await fetch(`${URL_MOVIMIENTOS}?fecha=${fecha}`);
+    const data = await resp.json();
+    document.getElementById("mov-resumen-ventas").textContent =
+      "$" + data.resumen.ventas.toLocaleString("es-AR");
+    document.getElementById("mov-resumen-egresos").textContent =
+      "$" + data.resumen.egresos.toLocaleString("es-AR");
+    document.getElementById("mov-resumen-balance").textContent =
+      "$" + data.resumen.balance.toLocaleString("es-AR");
+
+    if (!data.movimientos.length) {
+      lista.innerHTML =
+        '<div style="text-align:center;color:var(--pos-muted);padding:20px;font-size:.82rem">Sin movimientos.</div>';
+      return;
+    }
+
+    lista.innerHTML = data.movimientos.map((m, i) => {
+      let badgeClass = "mov-badge ";
+      if      (m.tipo === "EGRESO")         badgeClass += "mov-badge-egr";
+      else if (m.tipo === "INGRESO_MANUAL") badgeClass += "mov-badge-ing";
+      else if (m.metodo === "EFECTIVO")     badgeClass += "mov-badge-ef";
+      else if (m.metodo === "TARJETA")      badgeClass += "mov-badge-tar";
+      else if (m.metodo === "DIGITAL")      badgeClass += "mov-badge-dig";
+      else                                   badgeClass += "mov-badge-mix";
+
+      const badgeLabel = m.tipo === "EGRESO"         ? "Egreso"
+                       : m.tipo === "INGRESO_MANUAL"  ? "Ingreso"
+                       : m.metodo_label || m.metodo || "Mixto";
+
+      const signo = m.tipo === "EGRESO" ? "-" : "+";
+      const color = m.tipo === "EGRESO" ? "#f87171"
+                  : m.tipo === "INGRESO_MANUAL" ? "#4ade80"
+                  : "var(--pos-accent)";
+
+      const itemsHtml = (m.items || []).map(it =>
+        `<div style="display:flex;justify-content:space-between;margin-bottom:3px">
+           <span>${it.cantidad}x ${it.nombre}</span>
+           <span>$${it.subtotal.toLocaleString("es-AR")}</span>
+         </div>`
+      ).join("");
+
+      const cancelBtn = m.numero
+        ? `<button class="fn-btn" onclick="cancelarVenta('${m.numero}',event)"
+                   style="color:#f87171;border-color:rgba(233,69,96,.3);margin-top:8px">
+             Cancelar venta
+           </button>`
+        : "";
+
+      return `<div class="mov-item" onclick="toggleDetalle(${i})">
+        <div class="mov-item-header">
+          <div>
+            <span style="font-size:.8rem;font-weight:600">${m.hora}</span>
+            ${m.numero ? `<span style="font-size:.75rem;color:var(--pos-muted);margin-left:6px">${m.numero}</span>` : ""}
+            <span class="${badgeClass}" style="margin-left:6px">${badgeLabel}</span>
+          </div>
+          <span style="font-weight:700;color:${color}">${signo}$${m.total.toLocaleString("es-AR")}</span>
+        </div>
+        <div class="mov-item-detail" id="det-${i}">
+          ${itemsHtml}
+          ${m.descripcion ? `<div style="color:var(--pos-muted);margin-top:4px">${m.descripcion}</div>` : ""}
+          ${cancelBtn}
+        </div>
+      </div>`;
+    }).join("");
+  } catch {
+    lista.innerHTML =
+      '<div style="text-align:center;color:#f87171;padding:20px;font-size:.82rem">Error al cargar.</div>';
+  }
+}
+
+function toggleDetalle(i) {
+  document.getElementById(`det-${i}`).classList.toggle("visible");
+}
+
+async function cancelarVenta(numero, e) {
+  e.stopPropagation();
+  if (!confirm(`¿Cancelar venta ${numero}? No se puede deshacer.`)) return;
+  const resp = await fetch("{% url 'pedidos:cancelar_venta' %}", {
+    method:  "POST",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
+    body:    JSON.stringify({ numero }),
+  });
+  const data = await resp.json();
+  data.ok ? cargarMovimientos() : alert("Error: " + data.error);
+}
+
+async function registrarMovimientoManual() {
+  const tipo   = document.getElementById("mov-tipo").value;
+  const monto  = parseFloat(document.getElementById("mov-monto").value);
+  const motivo = document.getElementById("mov-motivo").value.trim();
+  if (!motivo) { document.getElementById("mov-motivo").focus(); return; }
+  if (!monto || monto <= 0) { document.getElementById("mov-monto").focus(); return; }
+  const resp = await fetch(URL_MOV_MANUAL, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
+    body:    JSON.stringify({ tipo, monto, motivo }),
+  });
+  const data = await resp.json();
+  if (data.ok) {
+    document.getElementById("mov-monto").value  = "";
+    document.getElementById("mov-motivo").value = "";
+    cargarMovimientos();
+  } else {
+    alert("Error: " + data.error);
+  }
+}
+
+// ════════════════════════════════════════════
+// CORTE DEL DÍA
+// ════════════════════════════════════════════
+
+let corteData = null;
+
+async function abrirCorte() {
+  document.getElementById("modal-corte").classList.add("visible");
+  document.getElementById("corte-real").value    = "";
+  document.getElementById("corte-diff").textContent = "";
+  const resp = await fetch(URL_CORTE);
+  corteData  = await resp.json();
+  const d    = corteData;
+  document.getElementById("corte-detalle").innerHTML = `
+    <div class="corte-row">
+      <span>💵 Ventas efectivo</span>
+      <span style="font-weight:700;color:var(--pos-accent)">$${d.ventas_efectivo.toLocaleString("es-AR")}</span>
+    </div>
+    <div class="corte-row">
+      <span>💳 Ventas tarjeta</span>
+      <span style="font-weight:700;color:#a89fec">$${(d.ventas_tarjeta||0).toLocaleString("es-AR")}</span>
+    </div>
+    <div class="corte-row">
+      <span>📱 Ventas digital (MP / transferencia)</span>
+      <span style="font-weight:700;color:#a89fec">$${d.ventas_digital.toLocaleString("es-AR")}</span>
+    </div>
+    <div class="corte-row">
+      <span>💚 Ingresos manuales</span>
+      <span style="color:#4ade80">$${d.ingresos_manuales.toLocaleString("es-AR")}</span>
+    </div>
+    <div class="corte-row">
+      <span>🔴 Egresos</span>
+      <span style="color:#f87171">-$${d.egresos.toLocaleString("es-AR")}</span>
+    </div>
+    <div class="corte-row" style="border-top:1px solid rgba(255,255,255,.15);margin-top:6px;padding-top:10px">
+      <span style="font-weight:700">Efectivo esperado en caja</span>
+      <span style="font-weight:700;color:var(--pos-accent);font-size:1rem">
+        $${d.efectivo_esperado.toLocaleString("es-AR")}
+      </span>
+    </div>
+    <div style="font-size:.72rem;color:var(--pos-muted);margin-top:4px">
+      Tarjeta y digital van a rendición por separado.
+    </div>
+  `;
+}
+
+function actualizarDiff() {
+  if (!corteData) return;
+  const real = parseFloat(document.getElementById("corte-real").value) || 0;
+  const diff = real - corteData.efectivo_esperado;
+  const el   = document.getElementById("corte-diff");
+  el.textContent = diff === 0 ? "✔ Sin diferencia"
+    : diff > 0 ? `Sobrante: $${diff.toLocaleString("es-AR")}`
+    : `Faltante: $${Math.abs(diff).toLocaleString("es-AR")}`;
+  el.style.color = diff >= 0 ? "#4ade80" : "#f87171";
+}
+
+async function cerrarCaja() {
+  const real = parseFloat(document.getElementById("corte-real").value);
+  if (isNaN(real) || real < 0) { document.getElementById("corte-real").focus(); return; }
+  if (!confirm("¿Confirmar cierre de caja?")) return;
+  const fd = new FormData();
+  fd.append("monto_real", real);
+  fd.append("csrfmiddlewaretoken", CSRF);
+  await fetch(URL_CERRAR_CAJA, { method: "POST", body: fd });
+  window.location.reload();
+}
+
+// ════════════════════════════════════════════
+// FILTROS Y BÚSQUEDA
+// ════════════════════════════════════════════
+
 document.getElementById("pos-tabs").addEventListener("click", e => {
   const tab = e.target.closest(".pos-tab");
   if (!tab) return;
@@ -810,7 +1172,6 @@ document.getElementById("pos-tabs").addEventListener("click", e => {
   });
 });
 
-// ── Búsqueda ─────────────────────────────────────────────────
 document.getElementById("pos-search").addEventListener("input", e => {
   const q = e.target.value.toLowerCase();
   document.querySelectorAll(".prod-card").forEach(c => {
@@ -818,452 +1179,98 @@ document.getElementById("pos-search").addEventListener("input", e => {
   });
 });
 
-// ── Atajos de teclado ────────────────────────────────────────
-// REGLA: F1–F12 NUNCA agregan productos. Solo acciones del sistema.
+// ════════════════════════════════════════════
+// ATAJOS DE TECLADO
+// ════════════════════════════════════════════
+
 document.addEventListener("keydown", e => {
   const enInput  = ["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName);
   const modalOk  = document.getElementById("modal-ok").classList.contains("visible");
   const modalLib = document.getElementById("modal-libre").classList.contains("visible");
   const modalCaj = document.getElementById("modal-caja").classList.contains("visible");
   const modalCob = document.getElementById("modal-cobro").classList.contains("visible");
+  const modalMov = document.getElementById("modal-movimientos").classList.contains("visible");
+  const modalCor = document.getElementById("modal-corte").classList.contains("visible");
 
-  // Bloquear F5 (recarga) cuando hay ítems en el ticket
-  if (e.key === "F5" && ticket.length > 0) {
-    e.preventDefault();
-    return;
-  }
+  // F5 bloqueado con ticket activo
+  if (e.key === "F5" && ticket.length > 0) { e.preventDefault(); return; }
 
-  // Si hay un modal abierto, solo ESC y Enter aplican
+  // Modal OK
   if (modalOk) {
     if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); cerrarModalOk(); }
     return;
   }
+  // Modal ítem libre
   if (modalLib) {
     if (e.key === "Escape") { e.preventDefault(); cerrarModalLibre(); }
     return;
   }
+  // Modal caja
   if (modalCaj) {
-    if (e.key === "Escape") { e.preventDefault(); document.getElementById("modal-caja").classList.remove("visible"); }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      document.getElementById("modal-caja").classList.remove("visible");
+    }
     return;
   }
+  // Modal cobro
   if (modalCob) {
     if (e.key === "Escape") { e.preventDefault(); cerrarModalCobro(); }
     if (e.key === "Enter" && !enInput) { e.preventDefault(); confirmarCobro(); }
     return;
   }
+  // Modal movimientos
+  if (modalMov) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      document.getElementById("modal-movimientos").classList.remove("visible");
+    }
+    return;
+  }
+  // Modal corte
+  if (modalCor) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      document.getElementById("modal-corte").classList.remove("visible");
+    }
+    return;
+  }
 
-  // F1 → abrir modal de cobro (no cobrar directamente)
+  // F1 → cobrar
   if (e.key === "F1") {
     e.preventDefault();
     if (!document.getElementById("btn-cobrar").disabled) abrirModalCobro();
     return;
   }
-
-  // F3 → foco en búsqueda
+  // F3 → búsqueda
   if (e.key === "F3") {
     e.preventDefault();
     const s = document.getElementById("pos-search");
     s.focus(); s.select();
     return;
   }
-
-  // F4 → limpiar ticket (con confirmación si hay ítems)
+  // F4 → limpiar
   if (e.key === "F4") {
     e.preventDefault();
-    if (ticket.length > 0 && !confirm("¿Cancelar ticket actual?")) return;
+    if (ticket.length && !confirm("¿Cancelar ticket actual?")) return;
     limpiarTicket();
     return;
   }
-
   // F9 → ítem libre
-  if (e.key === "F9") {
-    e.preventDefault();
-    abrirItemLibre();
-    return;
-  }
-
-  // F10 → movimientos del día
-  if (e.key === "F10") {
-    e.preventDefault();
-    abrirMovimientos();
-    return;
-  }
-
-  // F11 → corte del día
-  if (e.key === "F11") {
-    e.preventDefault();
-    abrirCorte();
-    return;
-  }
-
-  // ESC → cerrar modales o limpiar
+  if (e.key === "F9") { e.preventDefault(); abrirItemLibre(); return; }
+  // F10 → movimientos
+  if (e.key === "F10") { e.preventDefault(); abrirMovimientos(); return; }
+  // F11 → corte
+  if (e.key === "F11") { e.preventDefault(); abrirCorte(); return; }
+  // ESC general
   if (e.key === "Escape") {
     e.preventDefault();
-    limpiarTicket();
+    if (ticket.length && confirm("¿Cancelar ticket actual?")) limpiarTicket();
     if (document.activeElement) document.activeElement.blur();
-    return;
   }
 });
 
-// ═══════════════════════════════════════════
-// MODAL DE COBRO
-// ═══════════════════════════════════════════
-let metodoCobro = "EFECTIVO";
- 
-function abrirModalCobro() {
-  if (ticket.length === 0) return;
-  metodoCobro = "EFECTIVO";
- 
-  // Resetear campos
-  ["cobro-m-efectivo","cobro-m-mp","cobro-mix-ef","cobro-mix-mp","cobro-nombre-modal"].forEach(id => {
-    document.getElementById(id).value = "";
-  });
-  document.getElementById("cobro-vuelto-modal").textContent  = "";
-  document.getElementById("cobro-mixto-estado").textContent  = "";
-  document.getElementById("cobro-error").style.display       = "none";
- 
-  // Sincronizar método activo
-  document.querySelectorAll("#modal-cobro .metodo-btn").forEach(b => {
-    b.classList.toggle("activo", b.dataset.metodo === "EFECTIVO");
-  });
-  mostrarSeccionCobro("EFECTIVO");
- 
-  document.getElementById("cobro-modal-total").textContent =
-    "$" + calcularTotal().toLocaleString("es-AR");
- 
-  document.getElementById("modal-cobro").classList.add("visible");
-  setTimeout(() => document.getElementById("cobro-m-efectivo").focus(), 80);
-}
- 
-function cerrarModalCobro() {
-  document.getElementById("modal-cobro").classList.remove("visible");
-}
- 
-function setMetodoModal(btn) {
-  metodoCobro = btn.dataset.metodo;
-  document.querySelectorAll("#modal-cobro .metodo-btn").forEach(b => b.classList.remove("activo"));
-  btn.classList.add("activo");
-  mostrarSeccionCobro(metodoCobro);
-  document.getElementById("cobro-error").style.display = "none";
-}
- 
-function mostrarSeccionCobro(m) {
-  document.getElementById("cobro-sec-efectivo").style.display = m === "EFECTIVO"    ? "block" : "none";
-  document.getElementById("cobro-sec-mp").style.display       = m === "MERCADOPAGO" ? "block" : "none";
-  document.getElementById("cobro-sec-mixto").style.display    = m === "MIXTO"       ? "block" : "none";
-  actualizarCobro();
-}
- 
-function setMontoModal(v) {
-  document.getElementById("cobro-m-efectivo").value = v;
-  actualizarCobro();
-}
-function setMontoExactoModal() {
-  document.getElementById("cobro-m-efectivo").value = calcularTotal();
-  actualizarCobro();
-}
- 
-function actualizarCobro() {
-  const total = calcularTotal();
- 
-  if (metodoCobro === "EFECTIVO") {
-    const pagado = parseFloat(document.getElementById("cobro-m-efectivo").value) || 0;
-    const vuelto = pagado - total;
-    const el = document.getElementById("cobro-vuelto-modal");
-    if (pagado > 0) {
-      el.textContent = vuelto >= 0
-        ? "Vuelto: $" + vuelto.toLocaleString("es-AR")
-        : "Falta: $"  + Math.abs(vuelto).toLocaleString("es-AR");
-      el.style.color = vuelto >= 0 ? "#4ade80" : "#f87171";
-    } else {
-      el.textContent = "";
-    }
-  }
- 
-  if (metodoCobro === "MIXTO") {
-    const ef  = parseFloat(document.getElementById("cobro-mix-ef").value) || 0;
-    const mp  = parseFloat(document.getElementById("cobro-mix-mp").value) || 0;
-    const suma = ef + mp;
-    const el  = document.getElementById("cobro-mixto-estado");
-    const diff = suma - total;
-    if (ef > 0 || mp > 0) {
-      el.textContent = diff === 0
-        ? "✔ Suma exacta"
-        : diff > 0
-          ? `Sobra $${diff.toLocaleString("es-AR")}`
-          : `Falta $${Math.abs(diff).toLocaleString("es-AR")}`;
-      el.style.color = diff >= 0 ? "#4ade80" : "#f87171";
-    } else {
-      el.textContent = "";
-    }
-  }
-}
- 
-// ── Validación central ────────────────────────────────────────
-function validarCobro() {
-  const total = calcularTotal();
-  const mostrarError = (msg) => {
-    const el = document.getElementById("cobro-error");
-    el.textContent = msg; el.style.display = "block";
-    return false;
-  };
- 
-  if (metodoCobro === "EFECTIVO") {
-    const pagado = parseFloat(document.getElementById("cobro-m-efectivo").value);
-    if (isNaN(pagado) || pagado <= 0)
-      return mostrarError("Ingresá el monto recibido en efectivo.");
-    if (pagado < total)
-      return mostrarError(`El monto recibido ($${pagado.toLocaleString("es-AR")}) es menor al total ($${total.toLocaleString("es-AR")}).`);
-  }
- 
-  if (metodoCobro === "MERCADOPAGO") {
-    const mp = parseFloat(document.getElementById("cobro-m-mp").value);
-    if (isNaN(mp) || mp <= 0)
-      return mostrarError("Ingresá el monto cobrado por MercadoPago.");
-    if (Math.abs(mp - total) > 1)
-      return mostrarError(`El monto MP ($${mp.toLocaleString("es-AR")}) no coincide con el total ($${total.toLocaleString("es-AR")}).`);
-  }
- 
-  if (metodoCobro === "MIXTO") {
-    const ef  = parseFloat(document.getElementById("cobro-mix-ef").value) || 0;
-    const mp  = parseFloat(document.getElementById("cobro-mix-mp").value) || 0;
-    if (ef <= 0 && mp <= 0)
-      return mostrarError("Ingresá al menos un monto en efectivo o MercadoPago.");
-    if (ef + mp < total)
-      return mostrarError(`La suma ($${(ef+mp).toLocaleString("es-AR")}) no cubre el total ($${total.toLocaleString("es-AR")}).`);
-  }
- 
-  return true;
-}
- 
-async function confirmarCobro() {
-  if (!validarCobro()) return;
- 
-  const total  = calcularTotal();
-  const nombre = document.getElementById("cobro-nombre-modal").value.trim() || "Mostrador";
-  const ef     = parseFloat(document.getElementById("cobro-m-efectivo").value) || 0;
-  const mp     = parseFloat(document.getElementById("cobro-m-mp").value)       || 0;
-  const mixEf  = parseFloat(document.getElementById("cobro-mix-ef").value)     || 0;
-  const mixMp  = parseFloat(document.getElementById("cobro-mix-mp").value)     || 0;
- 
-  const montoEfectivo = metodoCobro === "EFECTIVO" ? ef : metodoCobro === "MIXTO" ? mixEf : 0;
-  const montoMp       = metodoCobro === "MERCADOPAGO" ? mp : metodoCobro === "MIXTO" ? mixMp : 0;
- 
-  const btn = document.getElementById("btn-confirmar-cobro");
-  btn.disabled = true;
-  btn.innerHTML = "⏳ Procesando…";
- 
-  try {
-    const resp = await fetch(URL_COBRAR, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
-      body: JSON.stringify({
-        items:        ticket.map(it => ({
-          producto_id:  it.producto_id,
-          cantidad:     it.cantidad,
-          libre:        it.libre || false,
-          libre_desc:   it.nombre,
-          libre_precio: it.precio,
-        })),
-        metodo_pago:     metodoCobro,
-        monto_efectivo:  montoEfectivo,
-        monto_mp:        montoMp,
-        monto_pagado:    montoEfectivo,
-        nombre,
-      }),
-    });
-    const data = await resp.json();
- 
-    if (data.ok) {
-      cerrarModalCobro();
-      const vuelto = montoEfectivo - total;
-      document.getElementById("modal-numero").textContent = data.numero;
-      document.getElementById("modal-vuelto").textContent =
-        metodoCobro !== "MERCADOPAGO" && vuelto > 0
-          ? "Vuelto: $" + vuelto.toLocaleString("es-AR") : "";
-      document.getElementById("modal-ok").classList.add("visible");
-    } else {
-      document.getElementById("cobro-error").textContent = "Error: " + data.error;
-      document.getElementById("cobro-error").style.display = "block";
-    }
-  } catch(e) {
-    document.getElementById("cobro-error").textContent = "Error de conexión.";
-    document.getElementById("cobro-error").style.display = "block";
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-check-circle"></i> Confirmar cobro (F1 / Enter)';
-  }
-}
-
-// ═══════════════════════════════════════════
-// MOVIMIENTOS DEL DÍA
-// ═══════════════════════════════════════════
-const URL_MOVIMIENTOS     = "{% url 'pagos:pos_movimientos' %}";
-const URL_MOV_MANUAL      = "{% url 'pagos:pos_movimiento_manual' %}";
-const URL_CORTE           = "{% url 'pagos:pos_corte' %}";
-const URL_CERRAR_CAJA     = "{% url 'pagos:cerrar_caja' %}";
- 
-function abrirMovimientos() {
-  // Fecha de hoy por defecto
-  const hoy = new Date().toISOString().split("T")[0];
-  document.getElementById("mov-fecha").value = hoy;
-  document.getElementById("modal-movimientos").classList.add("visible");
-  cargarMovimientos();
-}
- 
-async function cargarMovimientos() {
-  const fecha = document.getElementById("mov-fecha").value;
-  const lista = document.getElementById("mov-lista");
-  lista.innerHTML = '<div style="text-align:center;color:var(--pos-muted);padding:20px;font-size:.82rem">Cargando…</div>';
- 
-  try {
-    const resp = await fetch(`${URL_MOVIMIENTOS}?fecha=${fecha}`, {
-      headers: { "X-CSRFToken": CSRF }
-    });
-    const data = await resp.json();
- 
-    // Resumen
-    document.getElementById("mov-resumen-ventas").textContent   = "$" + data.resumen.ventas.toLocaleString("es-AR");
-    document.getElementById("mov-resumen-egresos").textContent  = "$" + data.resumen.egresos.toLocaleString("es-AR");
-    document.getElementById("mov-resumen-balance").textContent  = "$" + data.resumen.balance.toLocaleString("es-AR");
- 
-    if (data.movimientos.length === 0) {
-      lista.innerHTML = '<div style="text-align:center;color:var(--pos-muted);padding:20px;font-size:.82rem">Sin movimientos en esta fecha.</div>';
-      return;
-    }
- 
-    lista.innerHTML = data.movimientos.map((m, i) => {
-      const badgeClass = m.tipo === "VENTA"
-        ? (m.metodo === "EFECTIVO" ? "mov-badge-ef" : m.metodo === "MERCADOPAGO" ? "mov-badge-mp" : "mov-badge-mix")
-        : m.tipo === "EGRESO" ? "mov-badge-egr" : "mov-badge-ing";
- 
-      const badgeLabel = m.tipo === "VENTA"
-        ? (m.metodo === "EFECTIVO" ? "Efectivo" : m.metodo === "MERCADOPAGO" ? "MP" : "Mixto")
-        : m.tipo;
- 
-      const signo = m.tipo === "EGRESO" ? "-" : "+";
-      const color = m.tipo === "EGRESO" ? "#f87171" : m.tipo === "INGRESO_MANUAL" ? "#4ade80" : "var(--pos-accent)";
- 
-      return `<div class="mov-item" onclick="toggleDetalle(${i})">
-        <div class="mov-item-header">
-          <div>
-            <span style="font-size:.8rem;font-weight:600">${m.hora}</span>
-            ${m.numero ? `<span style="font-size:.75rem;color:var(--pos-muted);margin-left:6px">${m.numero}</span>` : ""}
-            <span class="${badgeClass}" style="margin-left:6px">${badgeLabel}</span>
-          </div>
-          <span style="font-weight:700;color:${color}">${signo}$${m.total.toLocaleString("es-AR")}</span>
-        </div>
-        <div class="mov-item-detail" id="det-${i}">
-          ${m.items ? m.items.map(it => `<div style="display:flex;justify-content:space-between;margin-bottom:3px">
-            <span>${it.cantidad}x ${it.nombre}</span>
-            <span>$${it.subtotal.toLocaleString("es-AR")}</span>
-          </div>`).join("") : ""}
-          ${m.descripcion ? `<div style="color:var(--pos-muted)">${m.descripcion}</div>` : ""}
-          ${m.numero ? `<div style="display:flex;gap:6px;margin-top:8px">
-            <button class="fn-btn" onclick="cancelarVenta('${m.numero}',event)" style="color:#f87171;border-color:rgba(233,69,96,.3)">Cancelar venta</button>
-          </div>` : ""}
-        </div>
-      </div>`;
-    }).join("");
- 
-  } catch(e) {
-    lista.innerHTML = '<div style="text-align:center;color:#f87171;padding:20px;font-size:.82rem">Error al cargar movimientos.</div>';
-  }
-}
- 
-function toggleDetalle(i) {
-  const el = document.getElementById(`det-${i}`);
-  el.classList.toggle("visible");
-}
- 
-async function cancelarVenta(numero, e) {
-  e.stopPropagation();
-  if (!confirm(`¿Cancelar la venta ${numero}? Esta acción no se puede deshacer.`)) return;
-  const resp = await fetch(`{% url 'pedidos:cancelar_venta' %}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
-    body: JSON.stringify({ numero }),
-  });
-  const data = await resp.json();
-  if (data.ok) { cargarMovimientos(); }
-  else { alert("Error: " + data.error); }
-}
- 
-async function registrarMovimientoManual() {
-  const tipo   = document.getElementById("mov-tipo").value;
-  const monto  = parseFloat(document.getElementById("mov-monto").value);
-  const motivo = document.getElementById("mov-motivo").value.trim();
- 
-  if (!motivo) { document.getElementById("mov-motivo").focus(); return; }
-  if (!monto || monto <= 0) { document.getElementById("mov-monto").focus(); return; }
- 
-  const resp = await fetch(URL_MOV_MANUAL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
-    body: JSON.stringify({ tipo, monto, motivo }),
-  });
-  const data = await resp.json();
-  if (data.ok) {
-    document.getElementById("mov-monto").value  = "";
-    document.getElementById("mov-motivo").value = "";
-    cargarMovimientos();
-  } else {
-    alert("Error: " + data.error);
-  }
-}
- 
-// ═══════════════════════════════════════════
-// CORTE DEL DÍA
-// ═══════════════════════════════════════════
-let corteData = null;
- 
-async function abrirCorte() {
-  document.getElementById("modal-corte").classList.add("visible");
-  document.getElementById("corte-real").value = "";
-  document.getElementById("corte-diff").textContent = "";
- 
-  const resp = await fetch(URL_CORTE, { headers: { "X-CSRFToken": CSRF } });
-  corteData  = await resp.json();
- 
-  const d = corteData;
-  document.getElementById("corte-detalle").innerHTML = `
-    <div class="corte-row"><span>💵 Ventas efectivo</span><span class="corte-total" style="color:var(--pos-accent)">$${d.ventas_efectivo.toLocaleString("es-AR")}</span></div>
-    <div class="corte-row"><span>📱 Ventas MP</span><span class="corte-total" style="color:#a89fec">$${d.ventas_mp.toLocaleString("es-AR")}</span></div>
-    <div class="corte-row"><span>💚 Ingresos manuales</span><span style="color:#4ade80">$${d.ingresos_manuales.toLocaleString("es-AR")}</span></div>
-    <div class="corte-row"><span>🔴 Egresos</span><span style="color:#f87171">-$${d.egresos.toLocaleString("es-AR")}</span></div>
-    <div class="corte-row" style="border-top:1px solid rgba(255,255,255,.15);padding-top:10px;margin-top:4px">
-      <span style="font-weight:700">Total esperado en caja</span>
-      <span class="corte-total" style="color:var(--pos-accent);font-size:1.1rem">$${d.total_esperado.toLocaleString("es-AR")}</span>
-    </div>
-    <div class="corte-row"><span style="font-size:.78rem;color:var(--pos-muted)">(Efectivo + manuales − egresos. MP va a rendición por separado.)</span></div>
-  `;
-}
- 
-function actualizarDiff() {
-  if (!corteData) return;
-  const real = parseFloat(document.getElementById("corte-real").value) || 0;
-  const diff = real - corteData.efectivo_esperado;
-  const el   = document.getElementById("corte-diff");
-  el.textContent = diff === 0
-    ? "✔ Sin diferencia"
-    : (diff > 0 ? `Sobrante: $${diff.toLocaleString("es-AR")}` : `Faltante: $${Math.abs(diff).toLocaleString("es-AR")}`);
-  el.style.color = diff >= 0 ? "#4ade80" : "#f87171";
-}
- 
-async function cerrarCaja() {
-  const real = parseFloat(document.getElementById("corte-real").value);
-  if (isNaN(real) || real < 0) {
-    document.getElementById("corte-real").focus(); return;
-  }
-  if (!confirm("¿Confirmar cierre de caja? No podrás registrar más ventas hasta abrir una nueva.")) return;
- 
-  const fd = new FormData();
-  fd.append("monto_real", real);
-  fd.append("csrfmiddlewaretoken", CSRF);
-  await fetch(URL_CERRAR_CAJA, { method: "POST", body: fd });
-  window.location.reload();
-}
-
+// Focus inicial
 document.getElementById("pos-search").focus();
 </script>
 {% endblock %}

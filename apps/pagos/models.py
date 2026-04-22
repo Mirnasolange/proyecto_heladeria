@@ -2,37 +2,83 @@ from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from decimal import Decimal
+from django.db.models import Sum
+
 
 from apps.pedidos.models import Pedido
 from apps.productos.models import Sabor
 
 
+
 class Pago(models.Model):
+    # Tipos principales
     TIPO_EFECTIVO = "EFECTIVO"
-    TIPO_MP       = "MERCADOPAGO"
+    TIPO_TARJETA  = "TARJETA"
+    TIPO_DIGITAL  = "DIGITAL"
     TIPO_CHOICES  = [
         (TIPO_EFECTIVO, "Efectivo"),
-        (TIPO_MP,       "MercadoPago"),
+        (TIPO_TARJETA,  "Tarjeta"),
+        (TIPO_DIGITAL,  "Digital"),
     ]
 
-    ESTADO_PENDIENTE  = "PENDIENTE"
-    ESTADO_APROBADO   = "APROBADO"
-    ESTADO_RECHAZADO  = "RECHAZADO"
-    ESTADO_CHOICES    = [
-        (ESTADO_PENDIENTE,  "Pendiente"),
-        (ESTADO_APROBADO,   "Aprobado"),
-        (ESTADO_RECHAZADO,  "Rechazado"),
+    # Subtipos — solo aplican según el tipo principal
+    SUBTIPO_DEBITO       = "DEBITO"
+    SUBTIPO_CREDITO      = "CREDITO"
+    SUBTIPO_MERCADOPAGO  = "MERCADOPAGO"
+    SUBTIPO_TRANSFERENCIA= "TRANSFERENCIA"
+    SUBTIPO_CHOICES = [
+        (SUBTIPO_DEBITO,        "Débito"),
+        (SUBTIPO_CREDITO,       "Crédito"),
+        (SUBTIPO_MERCADOPAGO,   "MercadoPago"),
+        (SUBTIPO_TRANSFERENCIA, "Transferencia"),
     ]
 
-    pedido             = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name="pagos")
-    tipo               = models.CharField(max_length=15, choices=TIPO_CHOICES)
-    monto              = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
-    estado             = models.CharField(max_length=12, choices=ESTADO_CHOICES, default=ESTADO_PENDIENTE)
-    referencia_externa = models.CharField(max_length=200, blank=True, help_text="ID de transacción MP u otra referencia.")
-    fecha              = models.DateTimeField(auto_now_add=True)
+    # Mapa tipo → subtipos válidos (usado en validación y frontend)
+    SUBTIPOS_POR_TIPO = {
+        TIPO_TARJETA: [SUBTIPO_DEBITO, SUBTIPO_CREDITO],
+        TIPO_DIGITAL: [SUBTIPO_MERCADOPAGO, SUBTIPO_TRANSFERENCIA],
+    }
+
+    ESTADO_PENDIENTE = "PENDIENTE"
+    ESTADO_APROBADO  = "APROBADO"
+    ESTADO_RECHAZADO = "RECHAZADO"
+    ESTADO_CHOICES   = [
+        (ESTADO_PENDIENTE, "Pendiente"),
+        (ESTADO_APROBADO,  "Aprobado"),
+        (ESTADO_RECHAZADO, "Rechazado"),
+    ]
+
+    pedido    = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name="pagos")
+    tipo      = models.CharField(max_length=15, choices=TIPO_CHOICES)
+    subtipo   = models.CharField(max_length=20, choices=SUBTIPO_CHOICES, blank=True, default="")
+    monto     = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))]
+    )
+    estado    = models.CharField(max_length=12, choices=ESTADO_CHOICES, default=ESTADO_APROBADO)
+    referencia= models.CharField(
+        max_length=200, blank=True,
+        help_text="Nro. de comprobante, ID de transacción MP, etc. No aplica a efectivo."
+    )
+    fecha     = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def es_efectivo(self):
+        return self.tipo == self.TIPO_EFECTIVO
+
+    @property
+    def es_digital(self):
+        return self.tipo == self.TIPO_DIGITAL
+
+    @property
+    def label_completo(self):
+        """Ej: 'Tarjeta – Débito', 'Digital – MercadoPago', 'Efectivo'"""
+        if self.subtipo:
+            return f"{self.get_tipo_display()} – {self.get_subtipo_display()}"
+        return self.get_tipo_display()
 
     def __str__(self):
-        return f"{self.get_tipo_display()} ${self.monto} ({self.get_estado_display()}) – {self.pedido.numero}"
+        return f"{self.label_completo} ${self.monto} ({self.get_estado_display()}) – {self.pedido.numero}"
 
     class Meta:
         verbose_name = "Pago"
@@ -41,19 +87,24 @@ class Pago(models.Model):
 
 
 class CajaDiaria(models.Model):
-    fecha                  = models.DateField(unique=True)
-    monto_inicial          = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
-    monto_cierre_esperado  = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
-    monto_cierre_real      = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    diferencia             = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    cerrada                = models.BooleanField(default=False)
-    abierta_en             = models.DateTimeField(auto_now_add=True)
-    cerrada_en             = models.DateTimeField(null=True, blank=True)
+    fecha                 = models.DateField(unique=True)
+    monto_inicial         = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    monto_cierre_esperado = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    monto_cierre_real     = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    diferencia            = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cerrada               = models.BooleanField(default=False)
+    abierta_en            = models.DateTimeField(auto_now_add=True)
+    cerrada_en            = models.DateTimeField(null=True, blank=True)
 
     def calcular_cierre_esperado(self):
-        from django.db.models import Sum
-        ingresos = self.movimientos.filter(tipo=MovimientoCaja.TIPO_INGRESO).aggregate(Sum("monto"))["monto__sum"] or Decimal('0')
-        egresos  = self.movimientos.filter(tipo=MovimientoCaja.TIPO_EGRESO).aggregate(Sum("monto"))["monto__sum"] or Decimal('0')
+        ingresos = (
+            self.movimientos.filter(tipo=MovimientoCaja.TIPO_INGRESO)
+            .aggregate(Sum("monto"))["monto__sum"] or Decimal("0")
+        )
+        egresos = (
+            self.movimientos.filter(tipo=MovimientoCaja.TIPO_EGRESO)
+            .aggregate(Sum("monto"))["monto__sum"] or Decimal("0")
+        )
         self.monto_cierre_esperado = self.monto_inicial + ingresos - egresos
         return self.monto_cierre_esperado
 
@@ -83,9 +134,15 @@ class MovimientoCaja(models.Model):
     ]
 
     caja        = models.ForeignKey(CajaDiaria, on_delete=models.CASCADE, related_name="movimientos")
-    pedido      = models.ForeignKey(Pedido, on_delete=models.SET_NULL, null=True, blank=True, related_name="movimientos_caja")
+    pedido      = models.ForeignKey(
+        Pedido, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="movimientos_caja"
+    )
     tipo        = models.CharField(max_length=8, choices=TIPO_CHOICES)
-    monto       = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    monto       = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))]
+    )
     descripcion = models.CharField(max_length=255, blank=True)
     fecha       = models.DateTimeField(auto_now_add=True)
 
@@ -100,7 +157,10 @@ class MovimientoCaja(models.Model):
 
 class AjusteStock(models.Model):
     sabor       = models.ForeignKey(Sabor, on_delete=models.CASCADE, related_name="ajustes")
-    cantidad_kg = models.DecimalField(max_digits=8, decimal_places=3, help_text="Positivo = suma. Negativo = resta.")
+    cantidad_kg = models.DecimalField(
+        max_digits=8, decimal_places=3,
+        help_text="Positivo = suma. Negativo = resta."
+    )
     motivo      = models.CharField(max_length=255, blank=True)
     fecha       = models.DateTimeField(auto_now_add=True)
 
@@ -119,21 +179,25 @@ class AjusteStock(models.Model):
 
 
 class InsumoStock(models.Model):
-    UNIDAD_UNIDAD   = "unidad"
-    UNIDAD_PAQUETE  = "paquete"
-    UNIDAD_CHOICES  = [
+    UNIDAD_UNIDAD  = "unidad"
+    UNIDAD_PAQUETE = "paquete"
+    UNIDAD_CHOICES = [
         (UNIDAD_UNIDAD,  "Unidad"),
         (UNIDAD_PAQUETE, "Paquete"),
     ]
 
-    nombre           = models.CharField(max_length=100, unique=True)
-    unidad           = models.CharField(max_length=15, choices=UNIDAD_CHOICES, default=UNIDAD_UNIDAD)
-    cantidad_actual  = models.PositiveIntegerField(default=0)
-    cantidad_minima  = models.PositiveIntegerField(default=10)
+    nombre          = models.CharField(max_length=100, unique=True)
+    unidad          = models.CharField(max_length=15, choices=UNIDAD_CHOICES, default=UNIDAD_UNIDAD)
+    cantidad_actual = models.PositiveIntegerField(default=0)
+    cantidad_minima = models.PositiveIntegerField(default=10)
 
     @property
     def bajo_stock(self):
         return self.cantidad_actual <= self.cantidad_minima
+
+    def descontar(self, cantidad=1):
+        self.cantidad_actual = max(0, self.cantidad_actual - cantidad)
+        self.save(update_fields=["cantidad_actual"])
 
     def __str__(self):
         return f"{self.nombre} ({self.cantidad_actual} {self.get_unidad_display()})"
