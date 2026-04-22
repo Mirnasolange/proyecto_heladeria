@@ -1,7 +1,8 @@
 from django.db import migrations
-from django.contrib.auth.models import User
 
 def create_admin(apps, schema_editor):
+    User = apps.get_model("auth", "User")
+
     if not User.objects.filter(username="admin").exists():
         User.objects.create_superuser(
             username="admin",
@@ -11,7 +12,9 @@ def create_admin(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
-    dependencies = []
+    dependencies = [
+        ("auth", "0012_alter_user_first_name_max_length"),
+    ]
 
     operations = [
         migrations.RunPython(create_admin),
