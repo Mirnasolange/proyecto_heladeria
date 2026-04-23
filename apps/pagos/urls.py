@@ -16,4 +16,8 @@ urlpatterns = [
     path('pos/movimientos/',       views.pos_movimientos,       name='pos_movimientos'),
     path('pos/movimiento-manual/', views.pos_movimiento_manual, name='pos_movimiento_manual'),
     path('pos/corte/',             views.pos_corte,             name='pos_corte'),
-]
+    path('sesion/abrir/',       views.abrir_sesion_caja,   name='abrir_sesion'),
+    path('sesion/datos-corte/', views.datos_corte_sesion,  name='datos_corte_sesion'),
+    path('sesion/cerrar/',      views.cerrar_sesion_caja,  name='cerrar_sesion'),
+    path('sesion/estado/',      views.estado_sesion,       name='estado_sesion'),
+    ]

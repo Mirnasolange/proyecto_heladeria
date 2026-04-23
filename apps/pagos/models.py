@@ -3,11 +3,10 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 from django.db.models import Sum
-
+from django.conf import settings
 
 from apps.pedidos.models import Pedido
 from apps.productos.models import Sabor
-
 
 
 class Pago(models.Model):
@@ -206,3 +205,206 @@ class InsumoStock(models.Model):
         verbose_name = "Insumo"
         verbose_name_plural = "Insumos"
         ordering = ["nombre"]
+
+
+#────────────────────────────────────────────────────────────────────────
+#────────────────────────────────────────────────────────────────────────
+#────────────────────────────────────────────────────────────────────────
+#────────────────────────────────────────────────────────────────────────
+#────────────────────────────────────────────────────────────────────────
+
+# ── NUEVOS modelos al final del archivo (no borrar nada existente) ──
+
+class Caja(models.Model):
+    nombre     = models.CharField(max_length=100, unique=True)
+    descripcion= models.CharField(max_length=255, blank=True)
+    activa     = models.BooleanField(default=True)
+    creada_en  = models.DateTimeField(auto_now_add=True)
+
+    def sesion_abierta(self):
+        return self.sesiones.filter(estado=CajaSesion.ESTADO_ABIERTA).first()
+
+    def __str__(self):
+        return self.nombre
+
+    class Meta:
+        verbose_name = "Caja"
+        verbose_name_plural = "Cajas"
+        ordering = ["nombre"]
+
+
+class CajaSesion(models.Model):
+    ESTADO_ABIERTA = "ABIERTA"
+    ESTADO_CERRADA = "CERRADA"
+    ESTADO_CHOICES = [
+        (ESTADO_ABIERTA, "Abierta"),
+        (ESTADO_CERRADA, "Cerrada"),
+    ]
+
+    caja              = models.ForeignKey(Caja, on_delete=models.PROTECT, related_name="sesiones")
+    usuario_apertura  = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="sesiones_apertura"
+    )
+    usuario_cierre    = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="sesiones_cierre"
+    )
+    fecha_apertura    = models.DateTimeField(default=timezone.now)
+    fecha_cierre      = models.DateTimeField(null=True, blank=True)
+    monto_inicial     = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    efectivo_real     = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    efectivo_esperado = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    diferencia        = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    estado            = models.CharField(max_length=8, choices=ESTADO_CHOICES, default=ESTADO_ABIERTA)
+
+    # Opcionales (ya los usaremos en los métodos)
+    ingresos_manuales = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    egresos           = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+
+    # ── Métodos de negocio ──────────────────────────────────────────
+
+    def calcular_efectivo_esperado(self):
+        """
+        efectivo_esperado = monto_inicial
+                          + ventas en efectivo de esta sesión
+                          + ingresos manuales
+                          - egresos
+        NUNCA confiar en el frontend: siempre recalcular desde BD.
+        """
+        from django.db.models import Sum as DSum
+        ventas_ef = (
+            Pago.objects
+            .filter(
+                pedido__movimientos_sesion__sesion=self,
+                tipo=Pago.TIPO_EFECTIVO,
+                estado=Pago.ESTADO_APROBADO,
+            )
+            .aggregate(total=DSum("monto"))["total"] or Decimal("0")
+        )
+
+        # ingresos/egresos manuales de esta sesión
+        ing = (
+            MovimientoCajaSesion.objects
+            .filter(sesion=self, tipo=MovimientoCajaSesion.TIPO_INGRESO)
+            .aggregate(total=DSum("monto"))["total"] or Decimal("0")
+        )
+        egr = (
+            MovimientoCajaSesion.objects
+            .filter(sesion=self, tipo=MovimientoCajaSesion.TIPO_EGRESO)
+            .aggregate(total=DSum("monto"))["total"] or Decimal("0")
+        )
+        self.ingresos_manuales = ing
+        self.egresos = egr
+        self.efectivo_esperado = self.monto_inicial + ventas_ef + ing - egr
+        return self.efectivo_esperado
+
+    def cerrar(self, efectivo_real, usuario):
+        """
+        Cierra la sesión de forma atómica.
+        Lanza ValueError si ya está cerrada.
+        """
+        from django.db import transaction
+
+        if self.estado == self.ESTADO_CERRADA:
+            raise ValueError("Esta sesión ya fue cerrada.")
+
+        with transaction.atomic():
+            self.calcular_efectivo_esperado()
+            self.efectivo_real   = Decimal(str(efectivo_real))
+            self.diferencia      = self.efectivo_real - self.efectivo_esperado
+            self.estado          = self.ESTADO_CERRADA
+            self.usuario_cierre  = usuario
+            self.fecha_cierre    = timezone.now()
+            self.save()
+
+    def datos_corte(self):
+        """
+        Devuelve dict con todo lo necesario para el modal de cierre.
+        Siempre calculado desde BD.
+        """
+        from django.db.models import Sum as DSum
+
+        # Ventas desagregadas por tipo de pago
+        pagos_qs = (
+            Pago.objects
+            .filter(
+                pedido__movimientos_sesion__sesion=self,
+                estado=Pago.ESTADO_APROBADO,
+            )
+        )
+        ventas_ef  = pagos_qs.filter(tipo=Pago.TIPO_EFECTIVO).aggregate(t=DSum("monto"))["t"] or Decimal("0")
+        ventas_tar = pagos_qs.filter(tipo=Pago.TIPO_TARJETA).aggregate(t=DSum("monto"))["t"]  or Decimal("0")
+        ventas_dig = pagos_qs.filter(tipo=Pago.TIPO_DIGITAL).aggregate(t=DSum("monto"))["t"]  or Decimal("0")
+
+        ing = (
+            MovimientoCajaSesion.objects
+            .filter(sesion=self, tipo=MovimientoCajaSesion.TIPO_INGRESO)
+            .aggregate(t=DSum("monto"))["t"] or Decimal("0")
+        )
+        egr = (
+            MovimientoCajaSesion.objects
+            .filter(sesion=self, tipo=MovimientoCajaSesion.TIPO_EGRESO)
+            .aggregate(t=DSum("monto"))["t"] or Decimal("0")
+        )
+        ef_esperado = self.monto_inicial + ventas_ef + ing - egr
+
+        return {
+            "monto_inicial":    float(self.monto_inicial),
+            "ventas_efectivo":  float(ventas_ef),
+            "ventas_tarjeta":   float(ventas_tar),
+            "ventas_digital":   float(ventas_dig),
+            "ingresos_manuales":float(ing),
+            "egresos":          float(egr),
+            "efectivo_esperado":float(ef_esperado),
+        }
+
+    def __str__(self):
+        return f"{self.caja} | {self.fecha_apertura.strftime('%d/%m/%Y %H:%M')} [{self.estado}]"
+
+    class Meta:
+        verbose_name = "Sesión de caja"
+        verbose_name_plural = "Sesiones de caja"
+        ordering = ["-fecha_apertura"]
+        # Garantiza unicidad a nivel de BD: solo una sesión ABIERTA por caja
+        constraints = [
+            models.UniqueConstraint(
+                fields=["caja"],
+                condition=models.Q(estado="ABIERTA"),
+                name="unique_sesion_abierta_por_caja",
+            )
+        ]
+
+
+class MovimientoCajaSesion(models.Model):
+    """
+    Movimientos ligados a una CajaSesion (nueva lógica).
+    Reemplaza gradualmente a MovimientoCaja para el flujo POS.
+    """
+    TIPO_INGRESO = "INGRESO"
+    TIPO_EGRESO  = "EGRESO"
+    TIPO_CHOICES = [
+        (TIPO_INGRESO, "Ingreso"),
+        (TIPO_EGRESO,  "Egreso"),
+    ]
+
+    sesion      = models.ForeignKey(CajaSesion, on_delete=models.CASCADE, related_name="movimientos_sesion")
+    pedido      = models.ForeignKey(
+        "pedidos.Pedido", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="movimientos_sesion"
+    )
+    tipo        = models.CharField(max_length=8, choices=TIPO_CHOICES)
+    monto       = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))]
+    )
+    descripcion = models.CharField(max_length=255, blank=True)
+    fecha       = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} ${self.monto} – {self.descripcion or self.fecha.strftime('%H:%M')}"
+
+    class Meta:
+        verbose_name = "Movimiento de sesión"
+        verbose_name_plural = "Movimientos de sesión"
+        ordering = ["-fecha"]
