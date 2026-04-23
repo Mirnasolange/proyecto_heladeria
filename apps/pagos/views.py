@@ -2,11 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, Count, Avg
+from django.db import transaction, IntegrityError
 from django.http import HttpResponse, JsonResponse
 from decimal import Decimal
 import datetime, json
 
-from .models import CajaDiaria, MovimientoCaja, AjusteStock, InsumoStock, Pago
+from .models import CajaDiaria, MovimientoCaja, AjusteStock, InsumoStock, Pago, Caja, CajaSesion, MovimientoCajaSesion
 from apps.pedidos.models import Pedido, ItemPedido, ItemPedidoSabor
 from apps.productos.models import Sabor, Producto
 from django.views.decorators.http import require_POST, require_GET
@@ -390,33 +391,32 @@ def pos_movimientos(request):
  #────────────────────────────────────────────
 @require_POST
 def pos_movimiento_manual(request):
-    """Registra un ingreso o egreso manual en la caja del día."""
-    from django.utils import timezone
     try:
         data   = json.loads(request.body)
         tipo   = data.get("tipo")
         monto  = Decimal(str(data.get("monto", 0)))
         motivo = data.get("motivo", "").strip()
- 
+
         if not motivo:
             return JsonResponse({"ok": False, "error": "El motivo es obligatorio."})
         if monto <= 0:
             return JsonResponse({"ok": False, "error": "El monto debe ser mayor a 0."})
-        if tipo not in [MovimientoCaja.TIPO_INGRESO, MovimientoCaja.TIPO_EGRESO]:
+        if tipo not in [MovimientoCajaSesion.TIPO_INGRESO, MovimientoCajaSesion.TIPO_EGRESO]:
             return JsonResponse({"ok": False, "error": "Tipo inválido."})
- 
-        hoy  = timezone.now().date()
-        caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
-        if not caja:
-            return JsonResponse({"ok": False, "error": "No hay caja abierta hoy."})
- 
-        MovimientoCaja.objects.create(
-            caja=caja, tipo=tipo, monto=monto, descripcion=motivo
+
+        caja_fisica = Caja.objects.filter(activa=True).first()
+        sesion      = caja_fisica.sesion_abierta() if caja_fisica else None
+        if not sesion:
+            return JsonResponse({"ok": False, "error": "No hay sesión de caja abierta."})
+
+        MovimientoCajaSesion.objects.create(
+            sesion      = sesion,
+            tipo        = tipo,
+            monto       = monto,
+            descripcion = motivo,
         )
-        caja.calcular_cierre_esperado()
-        caja.save(update_fields=["monto_cierre_esperado"])
- 
         return JsonResponse({"ok": True})
+
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)})
  
@@ -471,3 +471,170 @@ def pos_corte(request):
         "efectivo_esperado":  float(efectivo_esperado),
         "total_esperado":     float(total_esperado),
     })
+
+
+# ─────────────────────────────────────────────
+# CAJA SESIÓN (nueva lógica por turnos)
+# ─────────────────────────────────────────────
+
+@require_GET
+def estado_sesion(request):
+    """
+    Devuelve la sesión abierta para la caja activa del usuario.
+    El frontend consulta esto al cargar el POS para saber si debe
+    mostrar el modal de apertura obligatorio.
+    """
+    caja_id = request.GET.get("caja_id")
+    if not caja_id:
+        # Sin caja especificada: usar la primera activa
+        caja = Caja.objects.filter(activa=True).first()
+    else:
+        caja = Caja.objects.filter(pk=caja_id, activa=True).first()
+
+    if not caja:
+        return JsonResponse({"sesion_abierta": False, "error": "No hay caja configurada."})
+
+    sesion = caja.sesion_abierta()
+    if not sesion:
+        return JsonResponse({
+            "sesion_abierta": False,
+            "caja_id":  caja.pk,
+            "caja_nombre": caja.nombre,
+        })
+
+    return JsonResponse({
+        "sesion_abierta": True,
+        "sesion_id":      sesion.pk,
+        "caja_id":        caja.pk,
+        "caja_nombre":    caja.nombre,
+        "monto_inicial":  float(sesion.monto_inicial),
+        "apertura":       sesion.fecha_apertura.strftime("%d/%m/%Y %H:%M"),
+        "usuario":        sesion.usuario_apertura.get_full_name() or sesion.usuario_apertura.username,
+    })
+
+
+@require_POST
+def abrir_sesion_caja(request):
+    """
+    Abre una nueva sesión para la caja.
+    Valida que no exista ya una sesión abierta (también lo garantiza
+    el UniqueConstraint a nivel BD como segunda línea de defensa).
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False, "error": "No autenticado."}, status=401)
+
+    try:
+        data          = json.loads(request.body)
+        caja_id       = data.get("caja_id")
+        monto_inicial = Decimal(str(data.get("monto_inicial", "0")))
+
+        if monto_inicial < 0:
+            return JsonResponse({"ok": False, "error": "El monto inicial no puede ser negativo."})
+
+        caja = Caja.objects.filter(pk=caja_id, activa=True).first()
+        if not caja:
+            return JsonResponse({"ok": False, "error": "Caja no encontrada."}, status=404)
+
+        # Primera línea de defensa: check explícito
+        if caja.sesion_abierta():
+            return JsonResponse({"ok": False, "error": "Ya existe una sesión abierta para esta caja."})
+
+        with transaction.atomic():
+            sesion = CajaSesion.objects.create(
+                caja             = caja,
+                usuario_apertura = request.user,
+                monto_inicial    = monto_inicial,
+                estado           = CajaSesion.ESTADO_ABIERTA,
+            )
+
+        return JsonResponse({
+            "ok":        True,
+            "sesion_id": sesion.pk,
+            "apertura":  sesion.fecha_apertura.strftime("%d/%m/%Y %H:%M"),
+        })
+
+    except IntegrityError:
+        # Segunda línea de defensa: UniqueConstraint de BD
+        return JsonResponse({"ok": False, "error": "Ya existe una sesión abierta para esta caja."})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)
+
+
+@require_GET
+def datos_corte_sesion(request):
+    """
+    Devuelve el resumen de la sesión activa para mostrar en el modal de cierre.
+    El frontend NUNCA calcula efectivo_esperado; siempre viene del backend.
+    """
+    sesion_id = request.GET.get("sesion_id")
+    if not sesion_id:
+        # Intentar obtener la sesión activa de la primera caja
+        caja   = Caja.objects.filter(activa=True).first()
+        sesion = caja.sesion_abierta() if caja else None
+    else:
+        sesion = CajaSesion.objects.filter(pk=sesion_id, estado=CajaSesion.ESTADO_ABIERTA).first()
+
+    if not sesion:
+        return JsonResponse({"ok": False, "error": "No hay sesión abierta."}, status=404)
+
+    datos = sesion.datos_corte()
+    datos["ok"]       = True
+    datos["sesion_id"]= sesion.pk
+    return JsonResponse(datos)
+
+
+@require_POST
+def cerrar_sesion_caja(request):
+    """
+    Cierra la sesión de caja.
+    - Recalcula efectivo_esperado en backend (nunca confía en el frontend).
+    - Usa transacción para evitar race conditions.
+    - Bloquea doble submit con select_for_update.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False, "error": "No autenticado."}, status=401)
+
+    try:
+        data          = json.loads(request.body)
+        sesion_id     = data.get("sesion_id")
+        efectivo_real = data.get("efectivo_real")
+
+        if efectivo_real is None:
+            return JsonResponse({"ok": False, "error": "El efectivo real es obligatorio."})
+
+        try:
+            efectivo_real = Decimal(str(efectivo_real))
+        except Exception:
+            return JsonResponse({"ok": False, "error": "Monto inválido."})
+
+        if efectivo_real < 0:
+            return JsonResponse({"ok": False, "error": "El monto no puede ser negativo."})
+
+        with transaction.atomic():
+            # select_for_update evita race condition si dos requests llegan simultáneos
+            sesion = (
+                CajaSesion.objects
+                .select_for_update()
+                .filter(pk=sesion_id)
+                .first()
+            )
+            if not sesion:
+                return JsonResponse({"ok": False, "error": "Sesión no encontrada."}, status=404)
+
+            if sesion.estado == CajaSesion.ESTADO_CERRADA:
+                return JsonResponse({"ok": False, "error": "La sesión ya fue cerrada."})
+
+            sesion.cerrar(efectivo_real, request.user)
+
+        return JsonResponse({
+            "ok":               True,
+            "efectivo_esperado":float(sesion.efectivo_esperado),
+            "efectivo_real":    float(sesion.efectivo_real),
+            "diferencia":       float(sesion.diferencia),
+        })
+
+    except ValueError as e:
+        return JsonResponse({"ok": False, "error": str(e)})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)

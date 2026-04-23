@@ -432,26 +432,24 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
 </div>
 
 <!-- ════════════════════════════════════════════
-     MODAL: Abrir caja
+     MODAL: Apertura de caja (obligatorio, no cancelable)
 ════════════════════════════════════════════ -->
-<div id="modal-caja" class="pos-modal" style="z-index:997">
-  <div class="pos-modal-inner" id="modal-caja-inner">
-    <div class="modal-header">
-      <h3>💵 Abrir caja</h3>
-      <button class="modal-close"
-              onclick="document.getElementById('modal-caja').classList.remove('visible')">✕</button>
-    </div>
+<div id="modal-caja" class="pos-modal" style="z-index:9999">
+  <div class="pos-modal-inner">
+    <div style="text-align:center;font-size:2rem;margin-bottom:8px">💵</div>
+    <h3 style="text-align:center;margin-bottom:4px">Abrir sesión de caja</h3>
+    <p style="font-size:.78rem;color:var(--pos-muted);text-align:center;margin-bottom:16px">
+      No hay una sesión abierta. Es obligatorio abrir una para operar.
+    </p>
+    <div style="font-size:.72rem;color:var(--pos-muted);margin-bottom:4px">Monto inicial ($)</div>
     <input type="number" id="caja-monto-inicial" class="pos-input"
-           placeholder="Monto inicial ($)" min="0" step="100">
-    <div style="display:flex;gap:8px">
-      <button class="pos-btn" onclick="abrirCaja()"
-              style="flex:1;background:var(--pos-accent)">Abrir</button>
-      <button class="pos-btn"
-              onclick="document.getElementById('modal-caja').classList.remove('visible')"
-              style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)">
-        Cancelar
-      </button>
-    </div>
+           placeholder="0" min="0" step="100" style="margin-bottom:12px">
+    <div id="caja-error" class="pos-error" style="display:none"></div>
+    <button id="btn-abrir-sesion" class="pos-btn" onclick="abrirSesion()"
+            style="background:var(--pos-accent)">
+      Abrir sesión
+    </button>
+    <!-- Sin botón Cancelar: es obligatorio -->
   </div>
 </div>
 
@@ -576,27 +574,35 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
 </div>
 
 <!-- ════════════════════════════════════════════
-     MODAL: Corte del día
+     MODAL: Corte / Cierre de sesión
 ════════════════════════════════════════════ -->
 <div id="modal-corte" class="pos-modal" style="z-index:1001">
   <div class="pos-modal-inner" id="modal-corte-inner">
     <div class="modal-header">
-      <h3>🔒 Corte del día</h3>
+      <h3>🔒 Corte de caja</h3>
       <button class="modal-close"
               onclick="document.getElementById('modal-corte').classList.remove('visible')">✕</button>
     </div>
-    <div id="corte-detalle" style="margin-bottom:16px"></div>
+    <div id="corte-detalle" style="margin-bottom:16px">
+      <div style="text-align:center;color:var(--pos-muted);padding:20px">Cargando…</div>
+    </div>
     <div style="font-size:.75rem;color:var(--pos-muted);margin-bottom:4px">
-      Efectivo real contado ($)
+      Efectivo real contado ($) <span style="color:#f87171">*</span>
     </div>
     <input type="number" id="corte-real" class="pos-input"
            placeholder="0" min="0" oninput="actualizarDiff()">
     <div id="corte-diff"
-         style="text-align:center;font-size:.9rem;font-weight:700;min-height:20px;
-                margin-top:6px;margin-bottom:12px"></div>
-    <button class="pos-btn" onclick="cerrarCaja()"
+         style="text-align:center;font-size:.9rem;font-weight:700;
+                min-height:22px;margin:6px 0 12px"></div>
+    <div style="font-size:.72rem;color:var(--pos-muted);margin-bottom:12px;
+                background:rgba(233,69,96,.08);border:1px solid rgba(233,69,96,.2);
+                border-radius:6px;padding:8px;text-align:center">
+      ⚠️ Esta acción no se puede deshacer
+    </div>
+    <div id="corte-error" class="pos-error" style="display:none"></div>
+    <button id="btn-cerrar-sesion" class="pos-btn" onclick="cerrarSesion()"
             style="background:#BA7517;color:#fff">
-      Confirmar cierre de caja
+      Confirmar cierre de sesión
     </button>
   </div>
 </div>
@@ -605,13 +611,21 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
 
 {% block extra_js %}
 <script>
-const CSRF            = "{{ csrf_token }}";
-const URL_COBRAR      = "{% url 'pedidos:pos_cobrar' %}";
-const URL_CAJA        = "{% url 'pagos:abrir_caja' %}";
-const URL_MOVIMIENTOS = "{% url 'pagos:pos_movimientos' %}";
-const URL_MOV_MANUAL  = "{% url 'pagos:pos_movimiento_manual' %}";
-const URL_CORTE       = "{% url 'pagos:pos_corte' %}";
-const URL_CERRAR_CAJA = "{% url 'pagos:cerrar_caja' %}";
+const CSRF              = "{{ csrf_token }}";
+const URL_COBRAR        = "{% url 'pedidos:pos_cobrar' %}";
+const URL_CAJA          = "{% url 'pagos:abrir_caja' %}";         // legacy, mantener
+const URL_MOVIMIENTOS   = "{% url 'pagos:pos_movimientos' %}";
+const URL_MOV_MANUAL    = "{% url 'pagos:pos_movimiento_manual' %}";
+const URL_CORTE         = "{% url 'pagos:pos_corte' %}";          // legacy
+const URL_CERRAR_CAJA   = "{% url 'pagos:cerrar_caja' %}";        // legacy
+// ── Nueva API de sesión ──
+const URL_SESION_ESTADO = "{% url 'pagos:estado_sesion' %}";
+const URL_SESION_ABRIR  = "{% url 'pagos:abrir_sesion' %}";
+const URL_SESION_DATOS  = "{% url 'pagos:datos_corte_sesion' %}";
+const URL_SESION_CERRAR = "{% url 'pagos:cerrar_sesion' %}";
+
+// Estado de sesión (se hidrata al cargar)
+let SESION = {{ sesion_json|safe }};
 
 let ticket = [];
 
@@ -898,6 +912,13 @@ function validarPagosModal() {
 }
 
 async function confirmarCobro() {
+    // ── Guard sesión ────────────────────────────────────
+  if (!SESION.abierta) {
+    mostrarErrorCobro("No hay sesión de caja abierta. Abrí una antes de cobrar.");
+    abrirModalCajaObligatorio();
+    return;
+  }
+  
   if (!validarPagosModal()) return;
   const nombre = document.getElementById("cobro-nombre-modal").value.trim() || "Mostrador";
   const btn    = document.getElementById("btn-confirmar-cobro");
@@ -951,20 +972,82 @@ function cerrarModalOk() {
 }
 
 // ════════════════════════════════════════════
-// CAJA
+// SESIÓN DE CAJA 
 // ════════════════════════════════════════════
 
-function abrirModalCaja() {
-  document.getElementById("modal-caja").classList.add("visible");
-  setTimeout(() => document.getElementById("caja-monto-inicial").focus(), 60);
+function bloquearPOS(mensaje) {
+  document.getElementById("btn-cobrar").disabled = true;
+  const infoEl = document.getElementById("caja-info");
+  if (infoEl) infoEl.innerHTML =
+    `<span style="color:#f87171">⛔ ${mensaje}</span>`;
 }
-async function abrirCaja() {
-  const monto = document.getElementById("caja-monto-inicial").value || "0";
-  const fd = new FormData();
-  fd.append("monto_inicial", monto);
-  fd.append("csrfmiddlewaretoken", CSRF);
-  await fetch(URL_CAJA, { method: "POST", body: fd });
-  window.location.reload();
+
+function desbloquearPOS(sesion) {
+  const infoEl = document.getElementById("caja-info");
+  if (infoEl) infoEl.innerHTML = `
+    <span>💵 Sesión abierta</span>
+    <span style="color:var(--pos-accent);font-weight:700">
+      Desde ${sesion.apertura || "hoy"}
+    </span>`;
+  // El btn-cobrar se habilita solo cuando hay ítems (renderTicket lo maneja)
+}
+
+// Al cargar el POS: verificar estado de sesión
+(async function verificarSesionInicial() {
+  if (SESION.abierta) {
+    desbloquearPOS(SESION);
+    return;
+  }
+  // No hay sesión: mostrar modal obligatorio
+  bloquearPOS("Sin sesión de caja");
+  abrirModalCajaObligatorio();
+})();
+
+function abrirModalCajaObligatorio() {
+  document.getElementById("modal-caja").classList.add("visible");
+  setTimeout(() => document.getElementById("caja-monto-inicial").focus(), 80);
+}
+
+// Mantener compatibilidad con el botón "Abrir caja" del ticket
+function abrirModalCaja() {
+  abrirModalCajaObligatorio();
+}
+
+async function abrirSesion() {
+  const monto  = parseFloat(document.getElementById("caja-monto-inicial").value) || 0;
+  const errEl  = document.getElementById("caja-error");
+  const btn    = document.getElementById("btn-abrir-sesion");
+
+  if (monto < 0) {
+    errEl.textContent = "El monto no puede ser negativo.";
+    errEl.style.display = "block"; return;
+  }
+  errEl.style.display = "none";
+  btn.disabled = true;
+  btn.textContent = "⏳ Abriendo…";
+
+  try {
+    const resp = await fetch(URL_SESION_ABRIR, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
+      body:    JSON.stringify({ caja_id: SESION.caja_id, monto_inicial: monto }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      SESION = { abierta: true, sesion_id: data.sesion_id, caja_id: SESION.caja_id };
+      document.getElementById("modal-caja").classList.remove("visible");
+      desbloquearPOS({ apertura: data.apertura });
+    } else {
+      errEl.textContent = data.error || "Error al abrir la sesión.";
+      errEl.style.display = "block";
+    }
+  } catch {
+    errEl.textContent = "Error de conexión.";
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Abrir sesión";
+  }
 }
 
 // ════════════════════════════════════════════
@@ -1096,66 +1179,135 @@ async function registrarMovimientoManual() {
 let corteData = null;
 
 async function abrirCorte() {
+  if (!SESION.abierta) {
+    alert("No hay sesión abierta para hacer el corte.");
+    return;
+  }
   document.getElementById("modal-corte").classList.add("visible");
-  document.getElementById("corte-real").value    = "";
+  document.getElementById("corte-real").value     = "";
   document.getElementById("corte-diff").textContent = "";
-  const resp = await fetch(URL_CORTE);
-  corteData  = await resp.json();
-  const d    = corteData;
-  document.getElementById("corte-detalle").innerHTML = `
-    <div class="corte-row">
-      <span>💵 Ventas efectivo</span>
-      <span style="font-weight:700;color:var(--pos-accent)">$${d.ventas_efectivo.toLocaleString("es-AR")}</span>
-    </div>
-    <div class="corte-row">
-      <span>💳 Ventas tarjeta</span>
-      <span style="font-weight:700;color:#a89fec">$${(d.ventas_tarjeta||0).toLocaleString("es-AR")}</span>
-    </div>
-    <div class="corte-row">
-      <span>📱 Ventas digital (MP / transferencia)</span>
-      <span style="font-weight:700;color:#a89fec">$${d.ventas_digital.toLocaleString("es-AR")}</span>
-    </div>
-    <div class="corte-row">
-      <span>💚 Ingresos manuales</span>
-      <span style="color:#4ade80">$${d.ingresos_manuales.toLocaleString("es-AR")}</span>
-    </div>
-    <div class="corte-row">
-      <span>🔴 Egresos</span>
-      <span style="color:#f87171">-$${d.egresos.toLocaleString("es-AR")}</span>
-    </div>
-    <div class="corte-row" style="border-top:1px solid rgba(255,255,255,.15);margin-top:6px;padding-top:10px">
-      <span style="font-weight:700">Efectivo esperado en caja</span>
-      <span style="font-weight:700;color:var(--pos-accent);font-size:1rem">
-        $${d.efectivo_esperado.toLocaleString("es-AR")}
-      </span>
-    </div>
-    <div style="font-size:.72rem;color:var(--pos-muted);margin-top:4px">
-      Tarjeta y digital van a rendición por separado.
-    </div>
-  `;
+  document.getElementById("corte-error").style.display = "none";
+  document.getElementById("corte-detalle").innerHTML =
+    '<div style="text-align:center;color:var(--pos-muted);padding:20px">Cargando…</div>';
+
+  try {
+    const resp = await fetch(`${URL_SESION_DATOS}?sesion_id=${SESION.sesion_id}`);
+    corteData  = await resp.json();
+
+    if (!corteData.ok) {
+      document.getElementById("corte-detalle").innerHTML =
+        `<div style="color:#f87171;text-align:center">${corteData.error}</div>`;
+      return;
+    }
+
+    const d = corteData;
+    document.getElementById("corte-detalle").innerHTML = `
+      <div class="corte-row">
+        <span>💰 Monto inicial</span>
+        <span>$${d.monto_inicial.toLocaleString("es-AR")}</span>
+      </div>
+      <div class="corte-row">
+        <span>💵 Ventas efectivo</span>
+        <span style="font-weight:700;color:var(--pos-accent)">
+          $${d.ventas_efectivo.toLocaleString("es-AR")}
+        </span>
+      </div>
+      <div class="corte-row">
+        <span>💳 Ventas tarjeta</span>
+        <span style="color:#a89fec">$${d.ventas_tarjeta.toLocaleString("es-AR")}</span>
+      </div>
+      <div class="corte-row">
+        <span>📱 Ventas digital</span>
+        <span style="color:#a89fec">$${d.ventas_digital.toLocaleString("es-AR")}</span>
+      </div>
+      <div class="corte-row">
+        <span>💚 Ingresos manuales</span>
+        <span style="color:#4ade80">$${d.ingresos_manuales.toLocaleString("es-AR")}</span>
+      </div>
+      <div class="corte-row">
+        <span>🔴 Egresos</span>
+        <span style="color:#f87171">-$${d.egresos.toLocaleString("es-AR")}</span>
+      </div>
+      <div class="corte-row"
+           style="border-top:1px solid rgba(255,255,255,.15);margin-top:8px;padding-top:10px">
+        <span style="font-weight:700">Efectivo esperado en caja</span>
+        <span style="font-weight:700;color:var(--pos-accent);font-size:1.05rem">
+          $${d.efectivo_esperado.toLocaleString("es-AR")}
+        </span>
+      </div>
+      <div style="font-size:.7rem;color:var(--pos-muted);margin-top:4px">
+        Tarjeta y digital van a rendición por separado.
+      </div>`;
+  } catch {
+    document.getElementById("corte-detalle").innerHTML =
+      '<div style="color:#f87171;text-align:center">Error al cargar los datos.</div>';
+  }
 }
 
 function actualizarDiff() {
   if (!corteData) return;
-  const real = parseFloat(document.getElementById("corte-real").value) || 0;
+  const real = parseFloat(document.getElementById("corte-real").value);
+  if (isNaN(real)) { document.getElementById("corte-diff").textContent = ""; return; }
   const diff = real - corteData.efectivo_esperado;
   const el   = document.getElementById("corte-diff");
-  el.textContent = diff === 0 ? "✔ Sin diferencia"
-    : diff > 0 ? `Sobrante: $${diff.toLocaleString("es-AR")}`
-    : `Faltante: $${Math.abs(diff).toLocaleString("es-AR")}`;
-  el.style.color = diff >= 0 ? "#4ade80" : "#f87171";
+  if (diff === 0) {
+    el.textContent = "✔ Sin diferencia"; el.style.color = "#4ade80";
+  } else if (diff > 0) {
+    el.textContent = `▲ Sobrante: $${diff.toLocaleString("es-AR")}`; el.style.color = "#4ade80";
+  } else {
+    el.textContent = `▼ Faltante: $${Math.abs(diff).toLocaleString("es-AR")}`; el.style.color = "#f87171";
+  }
 }
 
-async function cerrarCaja() {
-  const real = parseFloat(document.getElementById("corte-real").value);
-  if (isNaN(real) || real < 0) { document.getElementById("corte-real").focus(); return; }
-  if (!confirm("¿Confirmar cierre de caja?")) return;
-  const fd = new FormData();
-  fd.append("monto_real", real);
-  fd.append("csrfmiddlewaretoken", CSRF);
-  await fetch(URL_CERRAR_CAJA, { method: "POST", body: fd });
-  window.location.reload();
+async function cerrarSesion() {
+  const real  = parseFloat(document.getElementById("corte-real").value);
+  const errEl = document.getElementById("corte-error");
+  const btn   = document.getElementById("btn-cerrar-sesion");
+
+  if (isNaN(real) || real < 0) {
+    errEl.textContent = "Ingresá el efectivo real contado.";
+    errEl.style.display = "block"; return;
+  }
+  if (!confirm("¿Confirmar cierre de sesión? Esta acción no se puede deshacer.")) return;
+
+  errEl.style.display = "none";
+  btn.disabled = true;
+  btn.textContent = "⏳ Cerrando…";
+
+  try {
+    const resp = await fetch(URL_SESION_CERRAR, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
+      body:    JSON.stringify({ sesion_id: SESION.sesion_id, efectivo_real: real }),
+    });
+    const data = await resp.json();
+
+    if (data.ok) {
+      SESION = { abierta: false, sesion_id: null, caja_id: SESION.caja_id };
+      bloquearPOS("Sesión cerrada");
+      document.getElementById("modal-corte").classList.remove("visible");
+      // Mostrar resumen breve
+      alert(
+        `Sesión cerrada.\n` +
+        `Efectivo esperado: $${data.efectivo_esperado.toLocaleString("es-AR")}\n` +
+        `Efectivo real:     $${data.efectivo_real.toLocaleString("es-AR")}\n` +
+        `Diferencia:        $${data.diferencia.toLocaleString("es-AR")}`
+      );
+      // Forzar apertura nueva si quiere seguir operando
+      abrirModalCajaObligatorio();
+    } else {
+      errEl.textContent = data.error || "Error al cerrar la sesión.";
+      errEl.style.display = "block";
+    }
+  } catch {
+    errEl.textContent = "Error de conexión.";
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Confirmar cierre de sesión";
+  }
 }
+
 
 // ════════════════════════════════════════════
 // FILTROS Y BÚSQUEDA

@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from apps.productos.models import Producto, Sabor, Topping
 from .models import Pedido, ItemPedido, ItemPedidoSabor, ItemPedidoTopping
-from apps.pagos.models import Pago, CajaDiaria, MovimientoCaja
+from apps.pagos.models import Pago, CajaDiaria, MovimientoCaja, CajaSesion, MovimientoCajaSesion, Caja
 from apps.core.emails import notificar_pedido_recibido
 from apps.core.emails import notificar_pedido_listo, notificar_en_camino
 
@@ -44,6 +44,51 @@ def calcular_subtotal_item(item):
 
 def calcular_total_carrito(carrito):
     return sum(Decimal(str(item["subtotal"])) for item in carrito)
+
+# ─────────────────────────────────────────────
+# HELPERS DE REGISTRO EN CAJA
+# ─────────────────────────────────────────────
+
+def _registrar_en_caja(pedido, descripcion):
+    """
+    Registra un ingreso en CajaSesion (nuevo) y CajaDiaria (legacy).
+    Llaman solo cuando todos los pagos del pedido están aprobados.
+    Idempotente: no registra si ya existe movimiento para ese pedido.
+    """
+    from apps.pagos.models import (
+        Caja, MovimientoCajaSesion,
+        CajaDiaria, MovimientoCaja,
+    )
+
+    # Guardia: no registrar dos veces
+    if pedido.movimientos_sesion.exists():
+        return
+
+    # ── Sesión activa ──
+    caja_fisica = Caja.objects.filter(activa=True).first()
+    sesion      = caja_fisica.sesion_abierta() if caja_fisica else None
+    if sesion:
+        MovimientoCajaSesion.objects.create(
+            sesion      = sesion,
+            pedido      = pedido,
+            tipo        = MovimientoCajaSesion.TIPO_INGRESO,
+            monto       = pedido.total,
+            descripcion = descripcion,
+        )
+
+    # ── Legacy CajaDiaria ──
+    hoy         = timezone.now().date()
+    caja_diaria = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
+    if caja_diaria and not pedido.movimientos_caja.exists():
+        MovimientoCaja.objects.create(
+            caja        = caja_diaria,
+            pedido      = pedido,
+            tipo        = MovimientoCaja.TIPO_INGRESO,
+            monto       = pedido.total,
+            descripcion = descripcion,
+        )
+        caja_diaria.calcular_cierre_esperado()
+        caja_diaria.save(update_fields=["monto_cierre_esperado"])
 
 
 # ─────────────────────────────────────────────
@@ -214,48 +259,52 @@ def checkout(request):
             except Exception:
                 pass  # no romper si algo falla      
 
-
+    
         # ── Registrar pagos ──
         if metodo_pago == Pedido.PAGO_MIXTO:
-            if monto_efectivo:
+            ef  = Decimal(monto_efectivo) if monto_efectivo else Decimal("0")
+            mp  = Decimal(monto_mp)       if monto_mp       else Decimal("0")
+            if ef > 0:
                 Pago.objects.create(
-                    pedido=pedido, tipo=Pago.TIPO_EFECTIVO,
-                    monto=Decimal(monto_efectivo), estado=Pago.ESTADO_APROBADO
+                    pedido  = pedido,
+                    tipo    = Pago.TIPO_EFECTIVO,
+                    monto   = ef,
+                    estado  = Pago.ESTADO_PENDIENTE,   # siempre, cliente paga al retirar/recibir
                 )
-            if monto_mp:
+            if mp > 0:
                 Pago.objects.create(
-                    pedido=pedido, tipo=Pago.TIPO_MP,
-                    monto=Decimal(monto_mp), estado=Pago.ESTADO_PENDIENTE
+                    pedido  = pedido,
+                    tipo    = Pago.TIPO_DIGITAL,
+                    subtipo = Pago.SUBTIPO_MERCADOPAGO,
+                    monto   = mp,
+                    estado  = Pago.ESTADO_APROBADO,    # digital siempre aprobado
                 )
+
         elif metodo_pago == Pedido.PAGO_EFECTIVO:
             Pago.objects.create(
-                pedido=pedido, tipo=Pago.TIPO_EFECTIVO,
-                monto=pedido.total, estado=Pago.ESTADO_PENDIENTE
+                pedido = pedido,
+                tipo   = Pago.TIPO_EFECTIVO,
+                monto  = pedido.total,
+                estado = Pago.ESTADO_PENDIENTE,        # paga al retirar/recibir
             )
-        else:  # MercadoPago
+
+        else:  # MERCADOPAGO — 100% digital
             Pago.objects.create(
-                pedido=pedido, tipo=Pago.TIPO_MP,
-                monto=pedido.total, estado=Pago.ESTADO_PENDIENTE
+                pedido  = pedido,
+                tipo    = Pago.TIPO_DIGITAL,
+                subtipo = Pago.SUBTIPO_MERCADOPAGO,
+                monto   = pedido.total,
+                estado  = Pago.ESTADO_APROBADO,        # digital siempre aprobado
             )
 
-        # ── Registrar en caja (según tipo de pago) ──
-        es_delivery_efectivo = (
-            entrega == Pedido.ENTREGA_DELIVERY and
-            metodo_pago in [Pedido.PAGO_EFECTIVO, Pedido.PAGO_MIXTO]
-        )
+        # ── Registrar en caja: solo si todos los pagos están aprobados ──
+        # Mixto con efectivo pendiente → espera hasta ENTREGADO
+        # Digital puro → registra ya
+        tiene_pendiente = pedido.pagos.filter(estado=Pago.ESTADO_PENDIENTE).exists()
 
-        if not es_delivery_efectivo:
-            from django.utils import timezone
-            hoy = timezone.now().date()
-            caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
-            if caja:
-                MovimientoCaja.objects.create(
-                    caja=caja,
-                    pedido=pedido,
-                    tipo=MovimientoCaja.TIPO_INGRESO,
-                    monto=pedido.total,
-                    descripcion=f"Pedido {pedido.numero} – {pedido.get_metodo_pago_principal_display()}",
-                )            
+        if not tiene_pendiente:
+            _registrar_en_caja(pedido, f"Web – {pedido.numero} – {pedido.get_metodo_pago_principal_display()}")
+
 
         # ── Notificar por email ──
         notificar_pedido_recibido(pedido)
@@ -308,47 +357,37 @@ def detalle_pedido(request, numero):
     return render(request, "pedidos/detalle.html", context)
 
 
+
 @require_POST
 def cambiar_estado(request, numero):
-    pedido     = get_object_or_404(Pedido, numero=numero)
+    pedido       = get_object_or_404(Pedido, numero=numero)
     nuevo_estado = request.POST.get("estado")
     estados_validos = [e[0] for e in Pedido.ESTADO_CHOICES]
-    if nuevo_estado in estados_validos:
-        pedido.estado = nuevo_estado
-        pedido.save(update_fields=["estado"])
 
-        # ── Registrar caja si es delivery efectivo entregado ──
-        if (nuevo_estado == Pedido.ESTADO_ENTREGADO and
-            pedido.tipo_entrega == Pedido.ENTREGA_DELIVERY and
-            pedido.metodo_pago_principal in [Pedido.PAGO_EFECTIVO, Pedido.PAGO_MIXTO]):
-
-            from django.utils import timezone
-            from apps.pagos.models import CajaDiaria, MovimientoCaja
-
-            hoy  = timezone.now().date()
-            caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
-
-            if caja:
-                ya_registrado = pedido.movimientos_caja.exists()
-                if not ya_registrado:
-                    MovimientoCaja.objects.create(
-                        caja=caja,
-                        pedido=pedido,
-                        tipo=MovimientoCaja.TIPO_INGRESO,
-                        monto=pedido.total,
-                        descripcion=f"Delivery entregado – {pedido.numero}",
-                    )
-                    caja.calcular_cierre_esperado()
-                    caja.save(update_fields=["monto_cierre_esperado"])
-
-        # ── Notificaciones por cambio de estado ──
-        if nuevo_estado == Pedido.ESTADO_LISTO:
-            notificar_pedido_listo(pedido)
-        elif nuevo_estado == Pedido.ESTADO_EN_CAMINO:
-            notificar_en_camino(pedido)
-        messages.success(request, f"Estado actualizado a: {pedido.get_estado_display()}")
-    else:
+    if nuevo_estado not in estados_validos:
         messages.error(request, "Estado inválido.")
+        return redirect("pedidos:detalle", numero=numero)
+
+    pedido.estado = nuevo_estado
+    pedido.save(update_fields=["estado"])
+
+    # ── Al entregar: aprobar pagos pendientes y registrar en caja ──
+    if nuevo_estado == Pedido.ESTADO_ENTREGADO:
+        pagos_pendientes = pedido.pagos.filter(estado=Pago.ESTADO_PENDIENTE)
+        if pagos_pendientes.exists():
+            pagos_pendientes.update(estado=Pago.ESTADO_APROBADO)
+            _registrar_en_caja(
+                pedido,
+                f"{'Delivery' if pedido.tipo_entrega == Pedido.ENTREGA_DELIVERY else 'Retiro'} entregado – {pedido.numero}",
+            )
+
+    # ── Notificaciones ──
+    if nuevo_estado == Pedido.ESTADO_LISTO:
+        notificar_pedido_listo(pedido)
+    elif nuevo_estado == Pedido.ESTADO_EN_CAMINO:
+        notificar_en_camino(pedido)
+
+    messages.success(request, f"Estado actualizado a: {pedido.get_estado_display()}")
     return redirect("pedidos:detalle", numero=numero)
 
 
@@ -383,10 +422,26 @@ def repartos(request):
 # ─────────────────────────────────────────────
 
 def pos(request):
-    """Pantalla principal del Punto de Venta (POS)."""
     from apps.productos.models import Producto
-    productos = Producto.objects.filter(activo=True).order_by("tipo", "nombre")
-    context = {"productos": productos}
+    from apps.pagos.models import Caja
+
+    productos   = Producto.objects.filter(activo=True).order_by("tipo", "nombre")
+    caja_fisica = Caja.objects.filter(activa=True).first()
+    sesion      = caja_fisica.sesion_abierta() if caja_fisica else None
+
+    context = {
+        "productos":   productos,
+        "caja":        caja_fisica,
+        "sesion":      sesion,
+        "caja_id":     caja_fisica.pk if caja_fisica else None,
+        "sesion_id":   sesion.pk if sesion else None,
+        "sesion_json": json.dumps({
+            "abierta":        bool(sesion),
+            "sesion_id":      sesion.pk if sesion else None,
+            "caja_id":        caja_fisica.pk if caja_fisica else None,
+            "monto_inicial":  float(sesion.monto_inicial) if sesion else 0,
+        }),
+    }
     return render(request, "pedidos/pos.html", context)
 
 
@@ -535,21 +590,9 @@ def pos_cobrar(request):
                 referencia = p.get("referencia", "").strip(),
             )
 
-        # ── Registrar en caja ────────────────────────────────────
-        # Solo el efectivo entra en caja física; digital/tarjeta se registran
-        # igual para trazabilidad pero marcados en la descripción.
-        hoy  = timezone.now().date()
-        caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
-        if caja:
-            MovimientoCaja.objects.create(
-                caja        = caja,
-                pedido      = pedido,
-                tipo        = MovimientoCaja.TIPO_INGRESO,
-                monto       = pedido.total,
-                descripcion = f"POS – {pedido.numero} – {nombre}",
-            )
-            caja.calcular_cierre_esperado()
-            caja.save(update_fields=["monto_cierre_esperado"])
+
+        # ── Registrar en caja ────────────────────────────
+        _registrar_en_caja(pedido, f"POS – {pedido.numero} – {nombre}")
 
         # Vuelto: solo aplica si hay pago en efectivo
         monto_ef = sum(
@@ -574,34 +617,45 @@ def pos_cobrar(request):
     # ── Cancelar venta ──────────────────────────────────
 @require_POST
 def cancelar_venta(request):
-    """Cambia el estado del pedido a CANCELADO y revierte el movimiento de caja."""
-    from apps.pagos.models import CajaDiaria, MovimientoCaja
-    from django.utils import timezone
+    from apps.pagos.models import Caja, MovimientoCajaSesion, CajaDiaria, MovimientoCaja
     try:
         data   = json.loads(request.body)
         numero = data.get("numero")
         pedido = Pedido.objects.get(numero=numero)
- 
+
         if pedido.estado == Pedido.ESTADO_CANCELADO:
             return JsonResponse({"ok": False, "error": "Ya estaba cancelado."})
- 
+
         pedido.estado = Pedido.ESTADO_CANCELADO
         pedido.save(update_fields=["estado"])
- 
-        # Revertir movimiento de caja: crear egreso compensatorio
+
+        # Revertir solo si ya estaba registrado en caja
+        if pedido.movimientos_sesion.exists():
+            caja_fisica = Caja.objects.filter(activa=True).first()
+            sesion      = caja_fisica.sesion_abierta() if caja_fisica else None
+            if sesion:
+                MovimientoCajaSesion.objects.create(
+                    sesion      = sesion,
+                    pedido      = pedido,
+                    tipo        = MovimientoCajaSesion.TIPO_EGRESO,
+                    monto       = pedido.total,
+                    descripcion = f"Cancelación {pedido.numero}",
+                )
+
+        # Legacy
         hoy  = timezone.now().date()
-        caja = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
-        if caja and pedido.movimientos_caja.filter(tipo=MovimientoCaja.TIPO_INGRESO).exists():
+        caja_diaria = CajaDiaria.objects.filter(fecha=hoy, cerrada=False).first()
+        if caja_diaria and pedido.movimientos_caja.filter(tipo=MovimientoCaja.TIPO_INGRESO).exists():
             MovimientoCaja.objects.create(
-                caja        = caja,
+                caja        = caja_diaria,
                 pedido      = pedido,
                 tipo        = MovimientoCaja.TIPO_EGRESO,
                 monto       = pedido.total,
                 descripcion = f"Cancelación {pedido.numero}",
             )
-            caja.calcular_cierre_esperado()
-            caja.save(update_fields=["monto_cierre_esperado"])
- 
+            caja_diaria.calcular_cierre_esperado()
+            caja_diaria.save(update_fields=["monto_cierre_esperado"])
+
         return JsonResponse({"ok": True})
     except Pedido.DoesNotExist:
         return JsonResponse({"ok": False, "error": "Pedido no encontrado."})
