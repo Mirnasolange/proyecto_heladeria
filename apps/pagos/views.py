@@ -326,28 +326,32 @@ def exportar_proveedores(request):
 #────────────────────────────────────────────
 @require_GET
 def pos_movimientos(request):
-    """
-    Devuelve JSON con todos los movimientos del día (ventas POS + manuales).
-    Separa efectivo vs MP en ventas mixtas.
-    """
     import datetime
-    from django.utils import timezone
-    from apps.pedidos.models import Pedido, ItemPedido
-    from apps.pagos.models import CajaDiaria, MovimientoCaja, Pago
- 
+    from apps.pagos.models import CajaSesion, MovimientoCajaSesion, Caja, Pago
+
+    sesion_id = request.GET.get("sesion_id")
     fecha_str = request.GET.get("fecha", str(timezone.now().date()))
+
     try:
         fecha = datetime.date.fromisoformat(fecha_str)
     except ValueError:
         fecha = timezone.now().date()
- 
-    movimientos = []
-    total_ventas = Decimal("0")
+
+    # ── Determinar qué sesiones mostrar ──────────────────────────
+    if sesion_id:
+        sesiones = CajaSesion.objects.filter(pk=sesion_id)
+    else:
+        # Todas las sesiones del día (puede haber más de una por turnos)
+        sesiones = CajaSesion.objects.filter(
+            fecha_apertura__date=fecha
+        )
+
+    movimientos  = []
+    total_ventas  = Decimal("0")
     total_egresos = Decimal("0")
- 
-    caja = CajaDiaria.objects.filter(fecha=fecha).first()
-    if caja:
-        for mov in caja.movimientos.select_related("pedido").order_by("fecha"):
+
+    for sesion in sesiones.order_by("fecha_apertura"):
+        for mov in sesion.movimientos_sesion.select_related("pedido").order_by("fecha"):
             entry = {
                 "hora":        mov.fecha.strftime("%H:%M"),
                 "tipo":        mov.tipo,
@@ -355,34 +359,34 @@ def pos_movimientos(request):
                 "descripcion": mov.descripcion,
                 "numero":      mov.pedido.numero if mov.pedido else None,
                 "metodo":      mov.pedido.metodo_pago_principal if mov.pedido else None,
+                "origen":      mov.pedido.tipo_pedido if mov.pedido else None,  # WEB o MOSTRADOR
                 "items":       [],
             }
- 
+
             if mov.pedido:
                 entry["tipo"] = "VENTA"
                 for item in mov.pedido.items.select_related("producto").all():
                     nombre = item.producto.nombre if item.producto else item.comentarios
                     entry["items"].append({
-                        "cantidad":  item.cantidad,
-                        "nombre":    nombre,
-                        "subtotal":  float(item.subtotal),
+                        "cantidad": item.cantidad,
+                        "nombre":   nombre,
+                        "subtotal": float(item.subtotal),
                     })
                 total_ventas += mov.monto
-            elif mov.tipo == MovimientoCaja.TIPO_EGRESO:
+            elif mov.tipo == MovimientoCajaSesion.TIPO_EGRESO:
                 entry["tipo"] = "EGRESO"
                 total_egresos += mov.monto
             else:
                 entry["tipo"] = "INGRESO_MANUAL"
- 
+
             movimientos.append(entry)
- 
-    balance = float(total_ventas) - float(total_egresos)
+
     return JsonResponse({
         "movimientos": movimientos,
         "resumen": {
-            "ventas":   float(total_ventas),
-            "egresos":  float(total_egresos),
-            "balance":  balance,
+            "ventas":  float(total_ventas),
+            "egresos": float(total_egresos),
+            "balance": float(total_ventas - total_egresos),
         }
     })
  

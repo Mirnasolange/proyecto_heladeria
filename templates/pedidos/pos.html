@@ -254,6 +254,7 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
 .mov-badge-mix { background:rgba(200,169,126,.2);  color:#C8A97E; }
 .mov-badge-egr { background:rgba(233,69,96,.2);    color:#f87171; }
 .mov-badge-ing { background:rgba(74,222,128,.2);   color:#4ade80; }
+.mov-badge-web { background: rgba(167,139,250,.15); color: #a78bfa; border-color: rgba(167,139,250,.3); }
 
 /* ── Modal corte ── */
 #modal-corte       { z-index:1001; }
@@ -1061,13 +1062,19 @@ function abrirMovimientos() {
 }
 
 async function cargarMovimientos() {
-  const fecha = document.getElementById("mov-fecha").value;
-  const lista = document.getElementById("mov-lista");
-  lista.innerHTML =
-    '<div style="text-align:center;color:var(--pos-muted);padding:20px;font-size:.82rem">Cargando…</div>';
+  const fecha   = document.getElementById("mov-fecha").value;
+  const lista   = document.getElementById("mov-lista");
+  lista.innerHTML = '<div style="text-align:center;color:var(--pos-muted);padding:20px;font-size:.82rem">Cargando…</div>';
+
+  // Siempre manda sesion_id si hay sesión abierta, fecha como fallback
+  const params = SESION.sesion_id
+    ? `sesion_id=${SESION.sesion_id}`
+    : `fecha=${fecha}`;
+
   try {
-    const resp = await fetch(`${URL_MOVIMIENTOS}?fecha=${fecha}`);
+    const resp = await fetch(`${URL_MOVIMIENTOS}?${params}`);
     const data = await resp.json();
+
     document.getElementById("mov-resumen-ventas").textContent =
       "$" + data.resumen.ventas.toLocaleString("es-AR");
     document.getElementById("mov-resumen-egresos").textContent =
@@ -1076,27 +1083,43 @@ async function cargarMovimientos() {
       "$" + data.resumen.balance.toLocaleString("es-AR");
 
     if (!data.movimientos.length) {
-      lista.innerHTML =
-        '<div style="text-align:center;color:var(--pos-muted);padding:20px;font-size:.82rem">Sin movimientos.</div>';
+      lista.innerHTML = '<div style="text-align:center;color:var(--pos-muted);padding:20px;font-size:.82rem">Sin movimientos.</div>';
       return;
     }
 
     lista.innerHTML = data.movimientos.map((m, i) => {
+      // Badge según origen y tipo
       let badgeClass = "mov-badge ";
-      if      (m.tipo === "EGRESO")         badgeClass += "mov-badge-egr";
-      else if (m.tipo === "INGRESO_MANUAL") badgeClass += "mov-badge-ing";
-      else if (m.metodo === "EFECTIVO")     badgeClass += "mov-badge-ef";
-      else if (m.metodo === "TARJETA")      badgeClass += "mov-badge-tar";
-      else if (m.metodo === "DIGITAL")      badgeClass += "mov-badge-dig";
-      else                                   badgeClass += "mov-badge-mix";
+      let badgeLabel;
 
-      const badgeLabel = m.tipo === "EGRESO"         ? "Egreso"
-                       : m.tipo === "INGRESO_MANUAL"  ? "Ingreso"
-                       : m.metodo_label || m.metodo || "Mixto";
+      if (m.tipo === "EGRESO") {
+        badgeClass += "mov-badge-egr";
+        badgeLabel  = "Egreso";
+      } else if (m.tipo === "INGRESO_MANUAL") {
+        badgeClass += "mov-badge-ing";
+        badgeLabel  = "Ingreso";
+      } else if (m.origen === "WEB") {
+        // Ventas web — color diferenciado
+        badgeClass += "mov-badge-web";
+        badgeLabel  = "Web";
+      } else if (m.metodo === "EFECTIVO") {
+        badgeClass += "mov-badge-ef";
+        badgeLabel  = "Efectivo";
+      } else if (m.metodo === "TARJETA") {
+        badgeClass += "mov-badge-tar";
+        badgeLabel  = "Tarjeta";
+      } else if (m.metodo === "DIGITAL") {
+        badgeClass += "mov-badge-dig";
+        badgeLabel  = "Digital";
+      } else {
+        badgeClass += "mov-badge-mix";
+        badgeLabel  = "Mixto";
+      }
 
       const signo = m.tipo === "EGRESO" ? "-" : "+";
-      const color = m.tipo === "EGRESO" ? "#f87171"
+      const color = m.tipo === "EGRESO"        ? "#f87171"
                   : m.tipo === "INGRESO_MANUAL" ? "#4ade80"
+                  : m.origen === "WEB"          ? "#a78bfa"   // violeta para web
                   : "var(--pos-accent)";
 
       const itemsHtml = (m.items || []).map(it =>
@@ -1106,7 +1129,7 @@ async function cargarMovimientos() {
          </div>`
       ).join("");
 
-      const cancelBtn = m.numero
+      const cancelBtn = (m.numero && m.origen !== "WEB")
         ? `<button class="fn-btn" onclick="cancelarVenta('${m.numero}',event)"
                    style="color:#f87171;border-color:rgba(233,69,96,.3);margin-top:8px">
              Cancelar venta
@@ -1129,9 +1152,9 @@ async function cargarMovimientos() {
         </div>
       </div>`;
     }).join("");
+
   } catch {
-    lista.innerHTML =
-      '<div style="text-align:center;color:#f87171;padding:20px;font-size:.82rem">Error al cargar.</div>';
+    lista.innerHTML = '<div style="text-align:center;color:#f87171;padding:20px;font-size:.82rem">Error al cargar.</div>';
   }
 }
 
