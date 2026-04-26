@@ -601,6 +601,13 @@ body { background: var(--pos-bg) !important; color: var(--pos-text) !important; 
       ⚠️ Esta acción no se puede deshacer
     </div>
     <div id="corte-error" class="pos-error" style="display:none"></div>
+
+    <div style="font-size:.75rem;color:var(--pos-muted);margin-bottom:4px">
+       Fondo fijo para próxima sesión ($) <span style="color:var(--pos-muted)">(opcional)</span>
+    </div>
+    <input type="number" id="corte-fondo" class="pos-input"
+       placeholder="0" min="0" style="margin-bottom:12px">
+
     <button id="btn-cerrar-sesion" class="pos-btn" onclick="cerrarSesion()"
             style="background:#BA7517;color:#fff">
       Confirmar cierre de sesión
@@ -1286,6 +1293,7 @@ async function cerrarSesion() {
   const real  = parseFloat(document.getElementById("corte-real").value);
   const errEl = document.getElementById("corte-error");
   const btn   = document.getElementById("btn-cerrar-sesion");
+  const fondo = parseFloat(document.getElementById("corte-fondo").value);
 
   if (isNaN(real) || real < 0) {
     errEl.textContent = "Ingresá el efectivo real contado.";
@@ -1301,9 +1309,15 @@ async function cerrarSesion() {
     const resp = await fetch(URL_SESION_CERRAR, {
       method:  "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
-      body:    JSON.stringify({ sesion_id: SESION.sesion_id, efectivo_real: real }),
-    });
+      body: JSON.stringify({
+        sesion_id:         SESION.sesion_id,
+        efectivo_real:     real,
+        fondo_fijo_dejado: isNaN(fondo) ? null : fondo,
+      }),
+      });
     const data = await resp.json();
+
+  
 
     if (data.ok) {
       SESION = { abierta: false, sesion_id: null, caja_id: SESION.caja_id };

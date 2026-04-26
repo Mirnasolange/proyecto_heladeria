@@ -261,6 +261,8 @@ class CajaSesion(models.Model):
     # Opcionales (ya los usaremos en los métodos)
     ingresos_manuales = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     egresos           = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    fondo_fijo_dejado = models.DecimalField(max_digits=12, decimal_places=2,null=True, blank=True,
+    help_text="Monto de efectivo dejado para la siguiente sesión al cerrar.")
 
     # ── Métodos de negocio ──────────────────────────────────────────
 
