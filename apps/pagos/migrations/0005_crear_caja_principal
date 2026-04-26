@@ -1,0 +1,21 @@
+from django.db import migrations
+
+def crear_caja_principal(apps, schema_editor):
+    Caja = apps.get_model("pagos", "Caja")
+    Caja.objects.get_or_create(
+        nombre="Caja Principal",
+        defaults={"descripcion": "Caja física del local", "activa": True}
+    )
+
+def revertir(apps, schema_editor):
+    pass  # no borrar en reversa, es dato de producción
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("pagos", "0005_caja_cajasesion_movimientocajasesion"),  # ajustá al número real
+    ]
+
+    operations = [
+        migrations.RunPython(crear_caja_principal, revertir),
+    ]
