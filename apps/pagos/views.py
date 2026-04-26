@@ -11,7 +11,9 @@ from .models import CajaDiaria, MovimientoCaja, AjusteStock, InsumoStock, Pago, 
 from apps.pedidos.models import Pedido, ItemPedido, ItemPedidoSabor
 from apps.productos.models import Sabor, Producto
 from django.views.decorators.http import require_POST, require_GET
+from django.contrib.auth.decorators import login_required, user_passes_test
 
+staff_required = user_passes_test(lambda u: u.is_staff, login_url="/admin/login/")
 
 # ─────────────────────────────────────────────
 # CAJA
@@ -94,7 +96,7 @@ def registrar_egreso(request):
 # ─────────────────────────────────────────────
 # MÉTRICAS
 # ─────────────────────────────────────────────
-
+@staff_required
 def metricas(request):
     # Rango de fechas (default: últimos 30 días)
     hoy        = timezone.now().date()
@@ -326,28 +328,32 @@ def exportar_proveedores(request):
 #────────────────────────────────────────────
 @require_GET
 def pos_movimientos(request):
-    """
-    Devuelve JSON con todos los movimientos del día (ventas POS + manuales).
-    Separa efectivo vs MP en ventas mixtas.
-    """
     import datetime
-    from django.utils import timezone
-    from apps.pedidos.models import Pedido, ItemPedido
-    from apps.pagos.models import CajaDiaria, MovimientoCaja, Pago
- 
+    from apps.pagos.models import CajaSesion, MovimientoCajaSesion, Caja, Pago
+
+    sesion_id = request.GET.get("sesion_id")
     fecha_str = request.GET.get("fecha", str(timezone.now().date()))
+
     try:
         fecha = datetime.date.fromisoformat(fecha_str)
     except ValueError:
         fecha = timezone.now().date()
- 
-    movimientos = []
-    total_ventas = Decimal("0")
+
+    # ── Determinar qué sesiones mostrar ──────────────────────────
+    if sesion_id:
+        sesiones = CajaSesion.objects.filter(pk=sesion_id)
+    else:
+        # Todas las sesiones del día (puede haber más de una por turnos)
+        sesiones = CajaSesion.objects.filter(
+            fecha_apertura__date=fecha
+        )
+
+    movimientos  = []
+    total_ventas  = Decimal("0")
     total_egresos = Decimal("0")
- 
-    caja = CajaDiaria.objects.filter(fecha=fecha).first()
-    if caja:
-        for mov in caja.movimientos.select_related("pedido").order_by("fecha"):
+
+    for sesion in sesiones.order_by("fecha_apertura"):
+        for mov in sesion.movimientos_sesion.select_related("pedido").order_by("fecha"):
             entry = {
                 "hora":        mov.fecha.strftime("%H:%M"),
                 "tipo":        mov.tipo,
@@ -355,34 +361,34 @@ def pos_movimientos(request):
                 "descripcion": mov.descripcion,
                 "numero":      mov.pedido.numero if mov.pedido else None,
                 "metodo":      mov.pedido.metodo_pago_principal if mov.pedido else None,
+                "origen":      mov.pedido.tipo_pedido if mov.pedido else None,  # WEB o MOSTRADOR
                 "items":       [],
             }
- 
+
             if mov.pedido:
                 entry["tipo"] = "VENTA"
                 for item in mov.pedido.items.select_related("producto").all():
                     nombre = item.producto.nombre if item.producto else item.comentarios
                     entry["items"].append({
-                        "cantidad":  item.cantidad,
-                        "nombre":    nombre,
-                        "subtotal":  float(item.subtotal),
+                        "cantidad": item.cantidad,
+                        "nombre":   nombre,
+                        "subtotal": float(item.subtotal),
                     })
                 total_ventas += mov.monto
-            elif mov.tipo == MovimientoCaja.TIPO_EGRESO:
+            elif mov.tipo == MovimientoCajaSesion.TIPO_EGRESO:
                 entry["tipo"] = "EGRESO"
                 total_egresos += mov.monto
             else:
                 entry["tipo"] = "INGRESO_MANUAL"
- 
+
             movimientos.append(entry)
- 
-    balance = float(total_ventas) - float(total_egresos)
+
     return JsonResponse({
         "movimientos": movimientos,
         "resumen": {
-            "ventas":   float(total_ventas),
-            "egresos":  float(total_egresos),
-            "balance":  balance,
+            "ventas":  float(total_ventas),
+            "egresos": float(total_egresos),
+            "balance": float(total_ventas - total_egresos),
         }
     })
  
@@ -539,6 +545,35 @@ def abrir_sesion_caja(request):
         if caja.sesion_abierta():
             return JsonResponse({"ok": False, "error": "Ya existe una sesión abierta para esta caja."})
 
+        # ── Validación de pasamanos ──────────────────────────────
+        alerta_pasamanos = None
+        sesion_anterior = (
+            CajaSesion.objects
+            .filter(caja=caja, estado=CajaSesion.ESTADO_CERRADA)
+            .order_by("-fecha_cierre")
+            .first()
+        )
+        if (sesion_anterior
+                and sesion_anterior.fondo_fijo_dejado is not None
+                and sesion_anterior.fondo_fijo_dejado != monto_inicial):
+            diferencia_pasamanos = monto_inicial - sesion_anterior.fondo_fijo_dejado
+            alerta_pasamanos = (
+                f"Alerta de Pasamanos: se esperaba "
+                f"${sesion_anterior.fondo_fijo_dejado} y se declaró "
+                f"${monto_inicial} "
+                f"(diferencia: ${diferencia_pasamanos:+})."
+            )
+            # Log en consola del servidor por ahora; en el futuro → Dashboard Gerencial
+            import logging
+            logging.getLogger("cajas").warning(
+                "[PASAMANOS] Caja %s | Sesión anterior %s | "
+                "Esperado: %s | Declarado: %s | Diff: %s",
+                caja.nombre, sesion_anterior.pk,
+                sesion_anterior.fondo_fijo_dejado,
+                monto_inicial,
+                diferencia_pasamanos,
+            )
+
         with transaction.atomic():
             sesion = CajaSesion.objects.create(
                 caja             = caja,
@@ -551,6 +586,7 @@ def abrir_sesion_caja(request):
             "ok":        True,
             "sesion_id": sesion.pk,
             "apertura":  sesion.fecha_apertura.strftime("%d/%m/%Y %H:%M"),
+            "alerta_pasamanos": alerta_pasamanos,
         })
 
     except IntegrityError:
@@ -585,19 +621,14 @@ def datos_corte_sesion(request):
 
 @require_POST
 def cerrar_sesion_caja(request):
-    """
-    Cierra la sesión de caja.
-    - Recalcula efectivo_esperado en backend (nunca confía en el frontend).
-    - Usa transacción para evitar race conditions.
-    - Bloquea doble submit con select_for_update.
-    """
     if not request.user.is_authenticated:
         return JsonResponse({"ok": False, "error": "No autenticado."}, status=401)
 
     try:
-        data          = json.loads(request.body)
-        sesion_id     = data.get("sesion_id")
-        efectivo_real = data.get("efectivo_real")
+        data              = json.loads(request.body)
+        sesion_id         = data.get("sesion_id")
+        efectivo_real     = data.get("efectivo_real")
+        fondo_fijo_dejado = data.get("fondo_fijo_dejado")  # nuevo
 
         if efectivo_real is None:
             return JsonResponse({"ok": False, "error": "El efectivo real es obligatorio."})
@@ -610,8 +641,9 @@ def cerrar_sesion_caja(request):
         if efectivo_real < 0:
             return JsonResponse({"ok": False, "error": "El monto no puede ser negativo."})
 
+        fondo = Decimal(str(fondo_fijo_dejado)) if fondo_fijo_dejado is not None else None
+
         with transaction.atomic():
-            # select_for_update evita race condition si dos requests llegan simultáneos
             sesion = (
                 CajaSesion.objects
                 .select_for_update()
@@ -620,9 +652,11 @@ def cerrar_sesion_caja(request):
             )
             if not sesion:
                 return JsonResponse({"ok": False, "error": "Sesión no encontrada."}, status=404)
-
             if sesion.estado == CajaSesion.ESTADO_CERRADA:
                 return JsonResponse({"ok": False, "error": "La sesión ya fue cerrada."})
+
+            if fondo is not None:
+                sesion.fondo_fijo_dejado = fondo
 
             sesion.cerrar(efectivo_real, request.user)
 
@@ -631,6 +665,7 @@ def cerrar_sesion_caja(request):
             "efectivo_esperado":float(sesion.efectivo_esperado),
             "efectivo_real":    float(sesion.efectivo_real),
             "diferencia":       float(sesion.diferencia),
+            "fondo_fijo_dejado":float(sesion.fondo_fijo_dejado) if sesion.fondo_fijo_dejado is not None else None,
         })
 
     except ValueError as e:
