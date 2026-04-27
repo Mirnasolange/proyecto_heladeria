@@ -537,9 +537,17 @@ def abrir_sesion_caja(request):
         if monto_inicial < 0:
             return JsonResponse({"ok": False, "error": "El monto inicial no puede ser negativo."})
 
-        caja = Caja.objects.filter(pk=caja_id, activa=True).first()
+        if caja_id:
+            caja = Caja.objects.filter(pk=caja_id, activa=True).first()
+        else
+            caja = Caja.objects.filter(activa=true).first()
+
         if not caja:
-            return JsonResponse({"ok": False, "error": "Caja no encontrada."}, status=404)
+            caja = Caja.objects.create(
+                nombre="Caja Principal",
+                descripcion="Caja física del local",
+                activa=True
+            )
 
         # Primera línea de defensa: check explícito
         if caja.sesion_abierta():
