@@ -539,7 +539,7 @@ def abrir_sesion_caja(request):
 
         if caja_id:
             caja = Caja.objects.filter(pk=caja_id, activa=True).first()
-        else
+        else:
             caja = Caja.objects.filter(activa=true).first()
 
         if not caja:
